@@ -10,6 +10,7 @@
 static struct BH1750Struct instance_memory;
 
 /* User data parameters to pass to bh1750_create in the init cfg */
+static void *get_instance_memory_user_data = (void *)0xDE;
 static void *i2c_write_user_data = (void *)0x78;
 static void *i2c_read_user_data = (void *)0x9A;
 static void *start_timer_user_data = (void *)0xBC;
@@ -34,8 +35,8 @@ TEST_GROUP(BH1750NoSetup)
 
 static void populate_default_init_cfg(BH1750InitConfig *const cfg)
 {
-    // cfg->get_instance_memory = mock_bh1750_get_instance_memory;
-    // cfg->get_instance_memory_user_data = (void *)0x1;
+    cfg->get_instance_memory = mock_bh1750_get_instance_memory;
+    cfg->get_instance_memory_user_data = get_instance_memory_user_data;
     // cfg->i2c_write = mock_bh1750_i2c_write;
     // cfg->i2c_write_user_data = i2c_write_user_data;
     // cfg->i2c_read = mock_bh1750_i2c_read;
@@ -45,7 +46,7 @@ static void populate_default_init_cfg(BH1750InitConfig *const cfg)
     // cfg->i2c_addr = 0x23;
 }
 
-TEST(BH1750NoSetup, CreateReturnsInvalidArgIfGetInstMemoryIsNull)
+IGNORE_TEST(BH1750NoSetup, CreateReturnsInvalidArgIfGetInstMemoryIsNull)
 {
     FAIL_TEST("First test failing");
 
@@ -53,6 +54,57 @@ TEST(BH1750NoSetup, CreateReturnsInvalidArgIfGetInstMemoryIsNull)
     BH1750InitConfig cfg;
     populate_default_init_cfg(&cfg);
     // cfg.get_instance_memory = NULL;
+    uint8_t rc = bh1750_create(&bh1750, &cfg);
+
+    CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_ARG, rc);
+}
+
+TEST(BH1750NoSetup, CreateReturnsBufReturnedFromGetInstanceMemory)
+{
+    mock()
+        .expectOneCall("mock_bh1750_get_instance_memory")
+        .withParameter("user_data", get_instance_memory_user_data)
+        .andReturnValue((void *)&instance_memory);
+
+    BH1750 bh1750;
+    BH1750InitConfig cfg;
+    populate_default_init_cfg(&cfg);
+    uint8_t rc = bh1750_create(&bh1750, &cfg);
+
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc);
+    CHECK_EQUAL((void *)&instance_memory, (void *)bh1750);
+}
+
+TEST(BH1750NoSetup, CreateReturnsOutOfMemIfGetInstanceMemoryReturnsNull)
+{
+    mock()
+        .expectOneCall("mock_bh1750_get_instance_memory")
+        .withParameter("user_data", get_instance_memory_user_data)
+        .andReturnValue((void *)NULL);
+
+    BH1750 bh1750;
+    BH1750InitConfig cfg;
+    populate_default_init_cfg(&cfg);
+    uint8_t rc = bh1750_create(&bh1750, &cfg);
+
+    CHECK_EQUAL(BH1750_RESULT_CODE_OUT_OF_MEMORY, rc);
+}
+
+TEST(BH1750NoSetup, CreateReturnsInvalidArgInstNull)
+{
+    BH1750InitConfig cfg;
+    populate_default_init_cfg(&cfg);
+    uint8_t rc = bh1750_create(NULL, &cfg);
+
+    CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_ARG, rc);
+}
+
+TEST(BH1750NoSetup, CreateReturnsInvalidArgGetMemoryInstanceNull)
+{
+    BH1750 bh1750;
+    BH1750InitConfig cfg;
+    populate_default_init_cfg(&cfg);
+    cfg.get_instance_memory = NULL;
     uint8_t rc = bh1750_create(&bh1750, &cfg);
 
     CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_ARG, rc);

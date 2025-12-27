@@ -8,15 +8,63 @@ extern "C"
 
 typedef struct BH1750truct *BH1750;
 
+/**
+ * @brief Gets called in @ref bh1750_create to get memory for a BH1750 instance.
+ *
+ * The implementation of this function should return a pointer to memory of size sizeof(struct BH1750Struct). All
+ * private data for the created BH1750 instance will reside in that memory.
+ *
+ * The implementation of this function should be defined in a separate source file. That source file should include
+ * bh1750_private.h, which contains the definition of struct BH1750Struct. The implementation of this function then
+ * knows at compile time the size of memory that it needs to provide.
+ *
+ * This function will be called as many times as @ref bh1750_create is called (given that all parameters passed to @ref
+ * bh1750_create are valid). The implementation should be capable of returning memory for that many distinct instances.
+ *
+ * Implementation example - two statically allocated instances:
+ * ```
+ * void *get_instance_memory(void *user_data) {
+ *     static struct BH1750Struct instances[2];
+ *     static size_t idx = 0;
+ *     return (idx < 2) ? (&(instances[idx++])) : NULL;
+ * }
+ * ```
+ *
+ * If the application uses dynamic memory allocation, another implementation option is to allocate sizeof(struct
+ * BH1750Struct) bytes dynamically.
+ *
+ * @param user_data When this function is called, this parameter will be equal to the get_instance_memory_user_data
+ * field in the BH1750InitConfig passed to @ref bh1750_create.
+ *
+ * @return void * Pointer to instance memory of size sizeof(struct BH1750Struct). If failed to get memory, should return
+ * NULL. In that case, @ref bh1750_create will return @ref BH1750_RESULT_CODE_OUT_OF_MEMORY.
+ */
+typedef void *(*BH1750GetInstanceMemory)(void *user_data);
+
 typedef enum {
     BH1750_RESULT_CODE_OK = 0,
     BH1750_RESULT_CODE_INVALID_ARG,
+    BH1750_RESULT_CODE_OUT_OF_MEMORY,
 } BH1750ResultCode;
 
 typedef struct {
+    BH1750GetInstanceMemory get_instance_memory;
+    void *get_instance_memory_user_data;
 } BH1750InitConfig;
 
-uint8_t bh1750_create(BH1750 *const instance, const BH1750InitConfig *const cfg);
+/**
+ * @brief Create a BH1750 instance.
+ *
+ * @param[out] inst The created instance is written to this parameter in case of success.
+ * @param[in] cfg Initialization config.
+ *
+ * @retval BH1750_RESULT_CODE_OK Successfully created instance.
+ * @retval BH1750_RESULT_CODE_INVALID_ARG Failed to create instance. @p inst is NULL, or @p cfg is not a valid init
+ config.
+ * @retval BH1750_RESULT_CODE_OUT_OF_MEMORY Failed to create instance. Used-defined function cfg->get_instance_memory
+ returned NULL.
+ */
+uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg);
 
 #ifdef __cplusplus
 }
