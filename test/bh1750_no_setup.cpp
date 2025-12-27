@@ -6,6 +6,8 @@
 #include "bh1750_private.h"
 #include "mock_cfg_functions.h"
 
+#define BH1750_TEST_DEFAULT_I2C_ADDR 0x23
+
 /* To return from mock_bh1750_get_instance_memory */
 static struct BH1750Struct instance_memory;
 
@@ -44,7 +46,7 @@ static void populate_default_init_cfg(BH1750InitConfig *const cfg)
     // cfg->i2c_read_user_data = i2c_read_user_data;
     // cfg->start_timer = mock_bh1750_start_timer;
     // cfg->start_timer_user_data = start_timer_user_data;
-    // cfg->i2c_addr = 0x23;
+    cfg->i2c_addr = BH1750_TEST_DEFAULT_I2C_ADDR;
 }
 
 TEST(BH1750NoSetup, CreateReturnsBufReturnedFromGetInstanceMemory)

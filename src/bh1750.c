@@ -20,6 +20,20 @@ static bool is_valid_init_cfg(const BH1750InitConfig *const cfg)
 }
 
 /**
+ * @brief Interpret self->seq_cb as BH1750CompleteCb and execute it, if present.
+ *
+ * @param self BH1750 instance.
+ * @param rc Result code to pass to the complete cb.
+ */
+static void execute_complete_cb(BH1750 self, uint8_t rc)
+{
+    BH1750CompleteCb cb = (BH1750CompleteCb)self->seq_cb;
+    if (cb) {
+        cb(rc, self->seq_cb_user_data);
+    }
+}
+
+/**
  * @brief I2C callback to execute when the last I2C transaction in the sequence is complete.
  *
  * Interprets seq_cb as BH1750CompleteCb and executes it. Passes BH1750_RESULT_CODE_OK to seq_cb if I2C transaction was
@@ -35,8 +49,8 @@ static void generic_i2c_complete_cb(uint8_t result_code, void *user_data)
         return;
     }
 
-    BH1750CompleteCb cb = (BH1750CompleteCb)self->seq_cb;
-    cb(BH1750_RESULT_CODE_IO_ERR, self->seq_cb_user_data);
+    uint8_t rc = (result_code == BH1750_I2C_RESULT_CODE_OK) ? BH1750_RESULT_CODE_OK : BH1750_RESULT_CODE_IO_ERR;
+    execute_complete_cb(self, rc);
 }
 
 /**
@@ -62,7 +76,7 @@ static void start_sequence(BH1750 self, void *cb, void *user_data)
 static void send_power_on_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user_data)
 {
     uint8_t cmd = BH1750_POWER_ON_CMD;
-    self->i2c_write(&cmd, 1, 0x23, self->i2c_write_user_data, cb, user_data);
+    self->i2c_write(&cmd, 1, self->i2c_addr, self->i2c_write_user_data, cb, user_data);
 }
 
 uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg)
@@ -78,12 +92,17 @@ uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg)
 
     (*inst)->i2c_write = cfg->i2c_write;
     (*inst)->i2c_write_user_data = cfg->i2c_write_user_data;
+    (*inst)->i2c_addr = cfg->i2c_addr;
 
     return BH1750_RESULT_CODE_OK;
 }
 
 uint8_t bh1750_power_on(BH1750 self, BH1750CompleteCb cb, void *user_data)
 {
+    if (!self) {
+        return BH1750_RESULT_CODE_INVALID_ARG;
+    }
+
     start_sequence(self, (void *)cb, user_data);
     send_power_on_cmd(self, generic_i2c_complete_cb, (void *)self);
     return BH1750_RESULT_CODE_OK;

@@ -29,6 +29,8 @@ struct BH1750Struct {
     void *seq_cb;
     /** @brief User data to pass to seq_cb. */
     void *seq_cb_user_data;
+    /** @brief I2C address of this BH1750 instance. */
+    uint8_t i2c_addr;
 };
 
 #ifdef __cplusplus

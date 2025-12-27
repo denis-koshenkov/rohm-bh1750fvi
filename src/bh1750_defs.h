@@ -22,7 +22,7 @@ typedef enum {
     /** Successful I2C transaction. */
     BH1750_I2C_RESULT_CODE_OK = 0,
     /** I2C transaction failed. */
-    BH1750_I2C_RESULT_CODE_ERR = 0,
+    BH1750_I2C_RESULT_CODE_ERR,
 } BH1750_I2CResultCode;
 
 /**
