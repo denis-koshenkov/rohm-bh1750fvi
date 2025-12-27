@@ -6,7 +6,9 @@ extern "C"
 {
 #endif
 
-typedef struct BH1750truct *BH1750;
+#include "bh1750_defs.h"
+
+typedef struct BH1750Struct *BH1750;
 
 /**
  * @brief Gets called in @ref bh1750_create to get memory for a BH1750 instance.
@@ -41,15 +43,26 @@ typedef struct BH1750truct *BH1750;
  */
 typedef void *(*BH1750GetInstanceMemory)(void *user_data);
 
+/**
+ * @brief Callback type to execute when the BH1750 driver finishes an operation.
+ *
+ * @param result_code Indicates success or the reason for failure. One of @ref BH1750ResultCode.
+ * @param user_data User data.
+ */
+typedef void (*BH1750CompleteCb)(uint8_t result_code, void *user_data);
+
 typedef enum {
     BH1750_RESULT_CODE_OK = 0,
     BH1750_RESULT_CODE_INVALID_ARG,
     BH1750_RESULT_CODE_OUT_OF_MEMORY,
+    BH1750_RESULT_CODE_IO_ERR,
 } BH1750ResultCode;
 
 typedef struct {
     BH1750GetInstanceMemory get_instance_memory;
     void *get_instance_memory_user_data;
+    BH1750_I2CWrite i2c_write;
+    void *i2c_write_user_data;
 } BH1750InitConfig;
 
 /**
@@ -65,6 +78,8 @@ typedef struct {
  returned NULL.
  */
 uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg);
+
+uint8_t bh1750_power_on(BH1750 self, BH1750CompleteCb cb, void *user_data);
 
 #ifdef __cplusplus
 }

@@ -3,6 +3,7 @@ add_executable(run_tests)
 target_sources(run_tests PRIVATE
     main.cpp
     bh1750_no_setup.cpp
+    bh1750.cpp
 )
 
 add_subdirectory(mock)

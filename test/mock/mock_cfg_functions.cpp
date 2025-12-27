@@ -14,3 +14,21 @@ void mock_bh1750_free_instance_memory(void *instance_memory, void *user_data)
         .withParameter("instance_memory", instance_memory)
         .withParameter("user_data", user_data);
 }
+
+void mock_bh1750_i2c_write(uint8_t *data, size_t length, uint8_t i2c_addr, void *user_data, BH1750_I2CCompleteCb cb,
+                           void *cb_user_data)
+{
+    BH1750_I2CCompleteCb *cb_p = (BH1750_I2CCompleteCb *)mock().getData("i2cWriteCompleteCb").getPointerValue();
+    void **cb_user_data_p = (void **)mock().getData("i2cWriteCompleteCbUserData").getPointerValue();
+    *cb_p = cb;
+    *cb_user_data_p = cb_user_data;
+
+    mock()
+        .actualCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", data, length)
+        .withParameter("length", length)
+        .withParameter("i2c_addr", i2c_addr)
+        .withParameter("user_data", user_data)
+        .withParameter("cb", cb)
+        .withParameter("cb_user_data", cb_user_data);
+}
