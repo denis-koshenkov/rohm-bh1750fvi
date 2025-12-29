@@ -104,6 +104,24 @@ uint8_t bh1750_power_on(BH1750 self, BH1750CompleteCb cb, void *user_data);
  */
 uint8_t bh1750_power_down(BH1750 self, BH1750CompleteCb cb, void *user_data);
 
+/**
+ * @brief Reset data register value.
+ *
+ * This function removes the previous measurement result. It resets the internal illuminance data register in the BH1750
+ * device.
+ *
+ * @param[in] self BH1750 instance created by @ref bh1750_create.
+ * @param[in] cb Callback to execute once reset is complete.
+ * @param[in] user_data User data to pass to @p cb.
+ *
+ * @retval BH1750_RESULT_CODE_OK Successfully initiated reset.
+ * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL.
+ *
+ * @note This command does not work in power down mode. Make sure the device is in power on mode before calling this
+ * function.
+ */
+uint8_t bh1750_reset(BH1750 self, BH1750CompleteCb cb, void *user_data);
+
 #ifdef __cplusplus
 }
 #endif
