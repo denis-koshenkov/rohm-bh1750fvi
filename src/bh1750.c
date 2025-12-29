@@ -4,6 +4,7 @@
 #include "bh1750.h"
 #include "bh1750_private.h"
 
+#define BH1750_POWER_DOWN_CMD 0x0
 #define BH1750_POWER_ON_CMD 0x01
 
 /**
@@ -79,6 +80,19 @@ static void send_power_on_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user_d
     self->i2c_write(&cmd, 1, self->i2c_addr, self->i2c_write_user_data, cb, user_data);
 }
 
+/**
+ * @brief Send power down command.
+ *
+ * @param self BH1750 instance.
+ * @param cb Callback to execute once the command is sent.
+ * @param user_data User data to pass to @p cb.
+ */
+static void send_power_down_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user_data)
+{
+    uint8_t cmd = BH1750_POWER_DOWN_CMD;
+    self->i2c_write(&cmd, 1, self->i2c_addr, self->i2c_write_user_data, cb, user_data);
+}
+
 uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg)
 {
     if (!inst || !is_valid_init_cfg(cfg)) {
@@ -105,5 +119,16 @@ uint8_t bh1750_power_on(BH1750 self, BH1750CompleteCb cb, void *user_data)
 
     start_sequence(self, (void *)cb, user_data);
     send_power_on_cmd(self, generic_i2c_complete_cb, (void *)self);
+    return BH1750_RESULT_CODE_OK;
+}
+
+uint8_t bh1750_power_down(BH1750 self, BH1750CompleteCb cb, void *user_data)
+{
+    if (!self) {
+        return BH1750_RESULT_CODE_INVALID_ARG;
+    }
+
+    start_sequence(self, (void *)cb, user_data);
+    send_power_down_cmd(self, generic_i2c_complete_cb, (void *)self);
     return BH1750_RESULT_CODE_OK;
 }

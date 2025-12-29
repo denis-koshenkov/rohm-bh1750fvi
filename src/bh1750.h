@@ -82,6 +82,8 @@ uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg);
 
 uint8_t bh1750_power_on(BH1750 self, BH1750CompleteCb cb, void *user_data);
 
+uint8_t bh1750_power_down(BH1750 self, BH1750CompleteCb cb, void *user_data);
+
 #ifdef __cplusplus
 }
 #endif

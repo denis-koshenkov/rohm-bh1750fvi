@@ -89,7 +89,7 @@ TEST_GROUP(BH1750)
 typedef uint8_t (*SendCmdFunc)(BH1750 self, BH1750CompleteCb cb, void *user_data);
 
 static void test_send_cmd_func(SendCmdFunc send_cmd_func, uint8_t i2c_addr, BH1750CompleteCb complete_cb,
-                               uint8_t i2c_write_rc, uint8_t expected_complete_cb_rc)
+                               uint8_t *i2c_write_data, uint8_t i2c_write_rc, uint8_t expected_complete_cb_rc)
 {
     if (!send_cmd_func) {
         FAIL_TEST("send_cmd_func is NULL");
@@ -99,11 +99,9 @@ static void test_send_cmd_func(SendCmdFunc send_cmd_func, uint8_t i2c_addr, BH17
     uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
     CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
 
-    /* Power on command */
-    uint8_t i2c_write_data = 0x01;
     mock()
         .expectOneCall("mock_bh1750_i2c_write")
-        .withMemoryBufferParameter("data", &i2c_write_data, 1)
+        .withMemoryBufferParameter("data", i2c_write_data, 1)
         .withParameter("length", 1)
         .withParameter("i2c_addr", i2c_addr)
         .withParameter("user_data", i2c_write_user_data)
@@ -123,19 +121,25 @@ static void test_send_cmd_func(SendCmdFunc send_cmd_func, uint8_t i2c_addr, BH17
 
 TEST(BH1750, PowerOnWriteFail)
 {
-    test_send_cmd_func(bh1750_power_on, BH1750_TEST_DEFAULT_I2C_ADDR, bh1750_complete_cb, BH1750_I2C_RESULT_CODE_ERR,
-                       BH1750_RESULT_CODE_IO_ERR);
+    /* Power on command */
+    uint8_t i2c_write_data = 0x1;
+    test_send_cmd_func(bh1750_power_on, BH1750_TEST_DEFAULT_I2C_ADDR, bh1750_complete_cb, &i2c_write_data,
+                       BH1750_I2C_RESULT_CODE_ERR, BH1750_RESULT_CODE_IO_ERR);
 }
 
 TEST(BH1750, PowerOnWriteSuccess)
 {
-    test_send_cmd_func(bh1750_power_on, BH1750_TEST_DEFAULT_I2C_ADDR, bh1750_complete_cb, BH1750_I2C_RESULT_CODE_OK,
-                       BH1750_RESULT_CODE_OK);
+    /* Power on command */
+    uint8_t i2c_write_data = 0x1;
+    test_send_cmd_func(bh1750_power_on, BH1750_TEST_DEFAULT_I2C_ADDR, bh1750_complete_cb, &i2c_write_data,
+                       BH1750_I2C_RESULT_CODE_OK, BH1750_RESULT_CODE_OK);
 }
 
 TEST(BH1750, PowerOnCbNull)
 {
-    test_send_cmd_func(bh1750_power_on, BH1750_TEST_DEFAULT_I2C_ADDR, NULL, BH1750_I2C_RESULT_CODE_OK,
+    /* Power on command */
+    uint8_t i2c_write_data = 0x1;
+    test_send_cmd_func(bh1750_power_on, BH1750_TEST_DEFAULT_I2C_ADDR, NULL, &i2c_write_data, BH1750_I2C_RESULT_CODE_OK,
                        BH1750_RESULT_CODE_OK);
 }
 
@@ -151,6 +155,50 @@ TEST(BH1750, PowerOnSelfNull)
 
 TEST(BH1750, PowerOnWriteSuccessAltI2cAddr)
 {
-    test_send_cmd_func(bh1750_power_on, BH1750_TEST_ALT_I2C_ADDR, bh1750_complete_cb, BH1750_I2C_RESULT_CODE_OK,
-                       BH1750_RESULT_CODE_OK);
+    /* Power on command */
+    uint8_t i2c_write_data = 0x1;
+    test_send_cmd_func(bh1750_power_on, BH1750_TEST_ALT_I2C_ADDR, bh1750_complete_cb, &i2c_write_data,
+                       BH1750_I2C_RESULT_CODE_OK, BH1750_RESULT_CODE_OK);
+}
+
+TEST(BH1750, PowerDownWriteFail)
+{
+    /* Power down command */
+    uint8_t i2c_write_data = 0x0;
+    test_send_cmd_func(bh1750_power_down, BH1750_TEST_DEFAULT_I2C_ADDR, bh1750_complete_cb, &i2c_write_data,
+                       BH1750_I2C_RESULT_CODE_ERR, BH1750_RESULT_CODE_IO_ERR);
+}
+
+TEST(BH1750, PowerDownWriteSuccess)
+{
+    /* Power down command */
+    uint8_t i2c_write_data = 0x0;
+    test_send_cmd_func(bh1750_power_down, BH1750_TEST_DEFAULT_I2C_ADDR, bh1750_complete_cb, &i2c_write_data,
+                       BH1750_I2C_RESULT_CODE_OK, BH1750_RESULT_CODE_OK);
+}
+
+TEST(BH1750, PowerDownCbNullSuccess)
+{
+    /* Power down command */
+    uint8_t i2c_write_data = 0x0;
+    test_send_cmd_func(bh1750_power_down, BH1750_TEST_DEFAULT_I2C_ADDR, NULL, &i2c_write_data,
+                       BH1750_I2C_RESULT_CODE_OK, BH1750_RESULT_CODE_OK);
+}
+
+TEST(BH1750, PowerDownAltI2cAddr)
+{
+    /* Power down command */
+    uint8_t i2c_write_data = 0x0;
+    test_send_cmd_func(bh1750_power_down, BH1750_TEST_ALT_I2C_ADDR, bh1750_complete_cb, &i2c_write_data,
+                       BH1750_I2C_RESULT_CODE_OK, BH1750_RESULT_CODE_OK);
+}
+
+TEST(BH1750, PowerDownSelfNull)
+{
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+
+    void *complete_cb_user_data_expected = (void *)0x12;
+    uint8_t rc = bh1750_power_down(NULL, bh1750_complete_cb, complete_cb_user_data_expected);
+    CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_ARG, rc);
 }
