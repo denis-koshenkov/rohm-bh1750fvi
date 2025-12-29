@@ -60,6 +60,8 @@ typedef enum {
 
 typedef enum {
     BH1750_MEAS_MODE_H_RES,
+    BH1750_MEAS_MODE_H_RES2,
+    BH1750_MEAS_MODE_L_RES,
 } BH1750MeasMode;
 
 typedef struct {

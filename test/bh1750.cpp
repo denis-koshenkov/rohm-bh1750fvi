@@ -323,3 +323,19 @@ TEST(BH1750, StartContMeasSelfNull)
 {
     test_send_cmd_func_self_null(BH1750_TEST_START_MEAS_CMD, NULL);
 }
+
+TEST(BH1750, StartContMeasHResMode2)
+{
+    /* Start continuous measurement in H-resolution mode 2 cmd */
+    uint8_t i2c_write_data = 0x11;
+    test_send_cmd_func(BH1750_TEST_START_MEAS_CMD, BH1750_MEAS_MODE_H_RES2, NULL, BH1750_TEST_DEFAULT_I2C_ADDR,
+                       bh1750_complete_cb, &i2c_write_data, BH1750_I2C_RESULT_CODE_OK, BH1750_RESULT_CODE_OK);
+}
+
+TEST(BH1750, StartContMeasLResMode)
+{
+    /* Start continuous measurement in L-resolution mode cmd */
+    uint8_t i2c_write_data = 0x13;
+    test_send_cmd_func(BH1750_TEST_START_MEAS_CMD, BH1750_MEAS_MODE_L_RES, NULL, BH1750_TEST_DEFAULT_I2C_ADDR,
+                       bh1750_complete_cb, &i2c_write_data, BH1750_I2C_RESULT_CODE_OK, BH1750_RESULT_CODE_OK);
+}

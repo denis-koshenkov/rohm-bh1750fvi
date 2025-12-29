@@ -8,6 +8,8 @@
 #define BH1750_POWER_ON_CMD 0x01
 #define BH1750_RESET_CMD 0x07
 #define BH1750_START_CONTINUOUS_MEAS_H_RES_CMD 0x10
+#define BH1750_START_CONTINUOUS_MEAS_H_RES2_CMD 0x11
+#define BH1750_START_CONTINUOUS_MEAS_L_RES_CMD 0x13
 
 /**
  * @brief Check whether init config is valid.
@@ -109,6 +111,34 @@ static void send_reset_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user_data
 }
 
 /**
+ * @brief Get "start continuous measurement" command code.
+ *
+ * @param meas_mode Measurement mode.
+ *
+ * @return uint8_t Corresponding command code.
+ */
+uint8_t get_start_cont_meas_cmd_code(uint8_t meas_mode)
+{
+    uint8_t cmd_code;
+    switch (meas_mode) {
+    case BH1750_MEAS_MODE_H_RES:
+        cmd_code = BH1750_START_CONTINUOUS_MEAS_H_RES_CMD;
+        break;
+    case BH1750_MEAS_MODE_H_RES2:
+        cmd_code = BH1750_START_CONTINUOUS_MEAS_H_RES2_CMD;
+        break;
+    case BH1750_MEAS_MODE_L_RES:
+        cmd_code = BH1750_START_CONTINUOUS_MEAS_L_RES_CMD;
+        break;
+    default:
+        /* We should never end up here, because prior to calling this function, meas_mode must always be validated */
+        cmd_code = BH1750_START_CONTINUOUS_MEAS_H_RES_CMD;
+        break;
+    }
+    return cmd_code;
+}
+
+/**
  * @brief Send start continuous measurement command.
  *
  * @param self BH1750 instance.
@@ -118,7 +148,7 @@ static void send_reset_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user_data
  */
 static void send_start_continuous_meas_cmd(BH1750 self, uint8_t meas_mode, BH1750_I2CCompleteCb cb, void *user_data)
 {
-    uint8_t cmd = BH1750_START_CONTINUOUS_MEAS_H_RES_CMD;
+    uint8_t cmd = get_start_cont_meas_cmd_code(meas_mode);
     self->i2c_write(&cmd, 1, self->i2c_addr, self->i2c_write_user_data, cb, user_data);
 }
 
