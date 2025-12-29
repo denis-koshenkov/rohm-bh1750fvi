@@ -80,8 +80,28 @@ typedef struct {
  */
 uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg);
 
+/**
+ * @brief Power on BH1750 device.
+ *
+ * @param[in] self BH1750 instance created by @ref bh1750_create.
+ * @param[in] cb Callback to execute once power on is complete.
+ * @param[in] user_data User data to pass to @p cb.
+ *
+ * @retval BH1750_RESULT_CODE_OK Successfully initiated power on.
+ * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL.
+ */
 uint8_t bh1750_power_on(BH1750 self, BH1750CompleteCb cb, void *user_data);
 
+/**
+ * @brief Power down BH1750 device.
+ *
+ * @param[in] self BH1750 instance created by @ref bh1750_create.
+ * @param[in] cb Callback to execute once power down is complete.
+ * @param[in] user_data User data to pass to @p cb.
+ *
+ * @retval BH1750_RESULT_CODE_OK Successfully initiated power down.
+ * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL.
+ */
 uint8_t bh1750_power_down(BH1750 self, BH1750CompleteCb cb, void *user_data);
 
 #ifdef __cplusplus
