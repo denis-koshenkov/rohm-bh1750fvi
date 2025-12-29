@@ -58,6 +58,10 @@ typedef enum {
     BH1750_RESULT_CODE_IO_ERR,
 } BH1750ResultCode;
 
+typedef enum {
+    BH1750_MEAS_MODE_H_RES,
+} BH1750MeasMode;
+
 typedef struct {
     BH1750GetInstanceMemory get_instance_memory;
     void *get_instance_memory_user_data;
@@ -121,6 +125,8 @@ uint8_t bh1750_power_down(BH1750 self, BH1750CompleteCb cb, void *user_data);
  * function.
  */
 uint8_t bh1750_reset(BH1750 self, BH1750CompleteCb cb, void *user_data);
+
+uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH1750CompleteCb cb, void *user_data);
 
 #ifdef __cplusplus
 }
