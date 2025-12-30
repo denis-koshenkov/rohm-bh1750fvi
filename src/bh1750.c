@@ -25,6 +25,25 @@ static bool is_valid_init_cfg(const BH1750InitConfig *const cfg)
 }
 
 /**
+ * @brief Check whether measurement mode is valid.
+ *
+ * @param[in] meas_mode Measurement mode.
+ *
+ * @retval true Measurement mode is valid.
+ * @retval false Measurement mode is invalid.
+ */
+static bool is_valid_meas_mode(uint8_t meas_mode)
+{
+    // clang-format off
+    return (
+        (meas_mode == BH1750_MEAS_MODE_H_RES)
+        || (meas_mode == BH1750_MEAS_MODE_H_RES2)
+        || (meas_mode == BH1750_MEAS_MODE_L_RES)
+    );
+    // clang-format on
+}
+
+/**
  * @brief Interpret self->seq_cb as BH1750CompleteCb and execute it, if present.
  *
  * @param self BH1750 instance.
@@ -205,7 +224,7 @@ uint8_t bh1750_reset(BH1750 self, BH1750CompleteCb cb, void *user_data)
 
 uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH1750CompleteCb cb, void *user_data)
 {
-    if (!self) {
+    if (!self || !is_valid_meas_mode(meas_mode)) {
         return BH1750_RESULT_CODE_INVALID_ARG;
     }
 
