@@ -88,9 +88,16 @@ TEST_GROUP(BH1750)
 
 typedef uint8_t (*SendCmdFunc)(BH1750 self, BH1750CompleteCb cb, void *user_data);
 
-/* Macros to pass to is_start_meas_cmd of test_send_cmd_func and test_send_cmd_func_invalid_arg */
+/* Macros to pass to is_start_meas_cmd of test_send_cmd_func and test_invalid_arg */
 #define BH1750_TEST_START_MEAS_CMD true
 #define BH1750_TEST_SEND_FUNC_CMD false
+
+typedef enum {
+    /** Test a send command function. Use if the function to be tested has the same signature as @ref SendCmdFunc. */
+    INVALID_ARG_TEST_TYPE_SEND_CMD_FUNC,
+    /** Test bh1750_start_continuous_measurement function. */
+    INVALID_ARG_TEST_TYPE_START_CONT_MEAS,
+} InvalidArgTestType;
 
 /**
  * @brief Test a function that sends a command to BH1750.
@@ -105,7 +112,7 @@ typedef uint8_t (*SendCmdFunc)(BH1750 self, BH1750CompleteCb cb, void *user_data
  * @param i2c_write_data I2C write data that the test should expect to be passed to mock_bh1750_i2c_write as "data"
  * parameter.
  * @param i2c_write_rc I2C result code that the test should invoke i2c_write_complete_cb with.
- * @param expected_complete_cb_rc Result code that the tests expects to be returned from @p compelte_cb.
+ * @param expected_complete_cb_rc Result code that the tests expects to be returned from @p complete_cb.
  */
 static void test_send_cmd_func(bool is_start_meas_cmd, uint8_t meas_mode, SendCmdFunc send_cmd_func, uint8_t i2c_addr,
                                BH1750CompleteCb complete_cb, uint8_t *i2c_write_data, uint8_t i2c_write_rc,
@@ -146,23 +153,20 @@ static void test_send_cmd_func(bool is_start_meas_cmd, uint8_t meas_mode, SendCm
 }
 
 /**
- * @brief Test a function that sends a command when @ref BH1750_RESULT_CODE_INVALID_ARG is expected to be returned.
+ * @brief Test a function when @ref BH1750_RESULT_CODE_INVALID_ARG is expected to be returned.
  *
  * @param inst_p Pointer to BH1750 instance to be passed to @p send_cmd_func or @ref
  * bh1750_start_continuous_measurement. NULL if NULL should be passed as instance to the "self" parameter.
- * @param is_start_meas_cmd True if the function being tested is bh1750_start_continuous_measurement, false otherwise.
- * @param meas_mode Measurement mode to be passed to @ref bh1750_start_continuous_measurement. Only used if @p
- * is_start_meas_cmd is false.
- * @param send_cmd_func Function to test. This parameter is ignored if @p is_start_meas_cmd is true, because then we
- * know that bh1750_start_continuous_measurement is being tested.
+ * @param test_type Defines the test type. One of @ref InvalidArgTestType.
+ * @param test_type_context Test-type specific parameters. Should point to different data depending on the value of @p
+ * test_type:
+ * - INVALID_ARG_TEST_TYPE_SEND_CMD_FUNC: Should be a function pointer of type SendCmdFunc. The test calls this function
+ * and expects it to return @ref BH1750_RESULT_CODE_INVALID_ARG.
+ * - INVALID_ARG_TEST_TYPE_START_CONT_MEAS: Should point to a uint8_t which has one of the values from @ref
+ * BH1750MeasMode. This defines the value of meas_mode argument passed to bh1750_start_continuous_measurement.
  */
-static void test_send_cmd_func_invalid_arg(BH1750 *inst_p, bool is_start_meas_cmd, uint8_t meas_mode,
-                                           SendCmdFunc send_cmd_func)
+static void test_invalid_arg(BH1750 *inst_p, uint8_t test_type, void *test_type_context)
 {
-    if (!is_start_meas_cmd && !send_cmd_func) {
-        /* send_cmd_func arg is only used when is_start_meas_cmd if false */
-        FAIL_TEST("send_cmd_func is NULL");
-    }
 
     /* bh1750_create should be called even if inst_p is NULL, because setup function expects a call to the
      * get_instance_memory mock. In that case, pass the static global bh1750 to bh1750_create. */
@@ -173,11 +177,19 @@ static void test_send_cmd_func_invalid_arg(BH1750 *inst_p, bool is_start_meas_cm
     void *complete_cb_user_data_expected = (void *)0x11;
     BH1750 inst = inst_p ? *inst_p : NULL;
     uint8_t rc;
-    if (is_start_meas_cmd) {
-        rc = bh1750_start_continuous_measurement(inst, meas_mode, bh1750_complete_cb, complete_cb_user_data_expected);
-    } else {
+    switch (test_type) {
+    case INVALID_ARG_TEST_TYPE_SEND_CMD_FUNC: {
+        SendCmdFunc send_cmd_func = (SendCmdFunc)test_type_context;
         rc = send_cmd_func(inst, bh1750_complete_cb, complete_cb_user_data_expected);
+        break;
     }
+    case INVALID_ARG_TEST_TYPE_START_CONT_MEAS: {
+        uint8_t *meas_mode = (uint8_t *)test_type_context;
+        rc = bh1750_start_continuous_measurement(inst, *meas_mode, bh1750_complete_cb, complete_cb_user_data_expected);
+        break;
+    }
+    }
+
     CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_ARG, rc);
 }
 
@@ -207,7 +219,7 @@ TEST(BH1750, PowerOnCbNull)
 
 TEST(BH1750, PowerOnSelfNull)
 {
-    test_send_cmd_func_invalid_arg(NULL, BH1750_TEST_SEND_FUNC_CMD, BH1750_MEAS_MODE_H_RES, bh1750_power_on);
+    test_invalid_arg(NULL, INVALID_ARG_TEST_TYPE_SEND_CMD_FUNC, (void *)bh1750_power_on);
 }
 
 TEST(BH1750, PowerOnWriteSuccessAltI2cAddr)
@@ -255,7 +267,7 @@ TEST(BH1750, PowerDownAltI2cAddr)
 
 TEST(BH1750, PowerDownSelfNull)
 {
-    test_send_cmd_func_invalid_arg(NULL, BH1750_TEST_SEND_FUNC_CMD, BH1750_MEAS_MODE_H_RES, bh1750_power_down);
+    test_invalid_arg(NULL, INVALID_ARG_TEST_TYPE_SEND_CMD_FUNC, (void *)bh1750_power_down);
 }
 
 TEST(BH1750, ResetWriteFail)
@@ -292,7 +304,7 @@ TEST(BH1750, ResetAltI2cAddr)
 
 TEST(BH1750, ResetSelfNull)
 {
-    test_send_cmd_func_invalid_arg(NULL, BH1750_TEST_SEND_FUNC_CMD, BH1750_MEAS_MODE_H_RES, bh1750_reset);
+    test_invalid_arg(NULL, INVALID_ARG_TEST_TYPE_SEND_CMD_FUNC, (void *)bh1750_reset);
 }
 
 TEST(BH1750, StartContMeasWriteFail)
@@ -329,7 +341,8 @@ TEST(BH1750, StartContMeasAltI2cAddr)
 
 TEST(BH1750, StartContMeasSelfNull)
 {
-    test_send_cmd_func_invalid_arg(NULL, BH1750_TEST_START_MEAS_CMD, BH1750_MEAS_MODE_H_RES, NULL);
+    uint8_t meas_mode = BH1750_MEAS_MODE_H_RES;
+    test_invalid_arg(NULL, INVALID_ARG_TEST_TYPE_START_CONT_MEAS, (void *)&meas_mode);
 }
 
 TEST(BH1750, StartContMeasHResMode2)
@@ -351,9 +364,23 @@ TEST(BH1750, StartContMeasLResMode)
 TEST(BH1750, StartContMeasInvalidMeasMode)
 {
     uint8_t invalid_meas_mode = 0xFB;
-    test_send_cmd_func_invalid_arg(&bh1750, BH1750_TEST_START_MEAS_CMD, invalid_meas_mode, NULL);
+    test_invalid_arg(&bh1750, INVALID_ARG_TEST_TYPE_START_CONT_MEAS, (void *)&invalid_meas_mode);
 }
 
+/**
+ * @brief Test bh1750_set_measurement_time function.
+ *
+ * @param i2c_addr I2C address to create BH1750 instance with.
+ * @param meas_time Measurement time to pass to bh1750_set_measurement_time function.
+ * @param i2c_write_data_1 I2C write data that the test should expect to be passed to the first call to
+ * mock_bh1750_i2c_write as "data" parameter. Should point to 1 byte.
+ * @param i2c_write_rc_1 I2C result code that the test should invoke the first i2c_write_complete_cb with.
+ * @param i2c_write_data_1 I2C write data that the test should expect to be passed to the second call to
+ * mock_bh1750_i2c_write as "data" parameter. Should point to 1 byte.
+ * @param i2c_write_rc_2 I2C result code that the test should invoke the second i2c_write_complete_cb with.
+ * @param complete_cb Complete callback to execute once the command is sent.
+ * @param expected_complete_cb_rc Result code that the tests expects to be returned from @p complete_cb.
+ */
 static void test_set_meas_time(uint8_t i2c_addr, uint8_t meas_time, uint8_t *i2c_write_data_1, uint8_t i2c_write_rc_1,
                                uint8_t *i2c_write_data_2, uint8_t i2c_write_rc_2, BH1750CompleteCb complete_cb,
                                uint8_t expected_complete_cb_rc)
