@@ -97,6 +97,8 @@ typedef enum {
     INVALID_ARG_TEST_TYPE_SEND_CMD_FUNC,
     /** Test bh1750_start_continuous_measurement function. */
     INVALID_ARG_TEST_TYPE_START_CONT_MEAS,
+    /** Test bh1750_set_measurement_time function. */
+    INVALID_ARG_TEST_TYPE_SET_MEAS_TIME,
 } InvalidArgTestType;
 
 /**
@@ -164,10 +166,11 @@ static void test_send_cmd_func(bool is_start_meas_cmd, uint8_t meas_mode, SendCm
  * and expects it to return @ref BH1750_RESULT_CODE_INVALID_ARG.
  * - INVALID_ARG_TEST_TYPE_START_CONT_MEAS: Should point to a uint8_t which has one of the values from @ref
  * BH1750MeasMode. This defines the value of meas_mode argument passed to bh1750_start_continuous_measurement.
+ * - INVALID_ARG_TEST_TYPE_SET_MEAS_TIME: Should be a pointer to uint8_t. The uint8_t value is interpreted as the
+ * measurement time to pass to bh1750_set_measurement_time as the "meas_time" parameter.
  */
 static void test_invalid_arg(BH1750 *inst_p, uint8_t test_type, void *test_type_context)
 {
-
     /* bh1750_create should be called even if inst_p is NULL, because setup function expects a call to the
      * get_instance_memory mock. In that case, pass the static global bh1750 to bh1750_create. */
     BH1750 *inst_p_to_create = inst_p ? inst_p : &bh1750;
@@ -186,6 +189,11 @@ static void test_invalid_arg(BH1750 *inst_p, uint8_t test_type, void *test_type_
     case INVALID_ARG_TEST_TYPE_START_CONT_MEAS: {
         uint8_t *meas_mode = (uint8_t *)test_type_context;
         rc = bh1750_start_continuous_measurement(inst, *meas_mode, bh1750_complete_cb, complete_cb_user_data_expected);
+        break;
+    }
+    case INVALID_ARG_TEST_TYPE_SET_MEAS_TIME: {
+        uint8_t *meas_time = (uint8_t *)test_type_context;
+        rc = bh1750_set_measurement_time(inst, *meas_time, bh1750_complete_cb, complete_cb_user_data_expected);
         break;
     }
     }
@@ -472,4 +480,10 @@ TEST(BH1750, SetMeasTimeAltI2cAddr)
     uint8_t i2c_write_data_2 = 0x7F;
     test_set_meas_time(BH1750_TEST_ALT_I2C_ADDR, meas_time, &i2c_write_data_1, BH1750_I2C_RESULT_CODE_OK,
                        &i2c_write_data_2, BH1750_I2C_RESULT_CODE_OK, NULL, BH1750_RESULT_CODE_OK);
+}
+
+TEST(BH1750, SetMeasTimeSelfNull)
+{
+    uint8_t meas_time = 69;
+    test_invalid_arg(NULL, INVALID_ARG_TEST_TYPE_SET_MEAS_TIME, (void *)&meas_time);
 }

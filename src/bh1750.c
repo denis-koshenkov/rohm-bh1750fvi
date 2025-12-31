@@ -309,6 +309,10 @@ uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH17
 
 uint8_t bh1750_set_measurement_time(BH1750 self, uint8_t meas_time, BH1750CompleteCb cb, void *user_data)
 {
+    if (!self) {
+        return BH1750_RESULT_CODE_INVALID_ARG;
+    }
+
     start_sequence(self, (void *)cb, user_data);
     self->meas_time = meas_time;
 
