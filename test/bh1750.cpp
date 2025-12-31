@@ -534,3 +534,119 @@ TEST(BH1750, SetMeasTimeInvalMeasTime3)
     uint8_t meas_time = 0;
     test_invalid_arg(&bh1750, INVALID_ARG_TEST_TYPE_SET_MEAS_TIME, (void *)&meas_time);
 }
+
+static void test_init(uint8_t i2c_addr, uint8_t i2c_write_rc_1, uint8_t i2c_write_rc_2, uint8_t i2c_write_rc_3,
+                      BH1750CompleteCb complete_cb, uint8_t expected_complete_cb_rc)
+{
+    init_cfg.i2c_addr = i2c_addr;
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+
+    /* Power on command */
+    uint8_t i2c_write_data_1 = 0x01;
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", &i2c_write_data_1, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", i2c_addr)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+    if (i2c_write_rc_1 == BH1750_I2C_RESULT_CODE_OK) {
+        /* Set three most significant bits of MTreg to 010 */
+        uint8_t i2c_write_data_2 = 0x42;
+        mock()
+            .expectOneCall("mock_bh1750_i2c_write")
+            .withMemoryBufferParameter("data", &i2c_write_data_2, 1)
+            .withParameter("length", 1)
+            .withParameter("i2c_addr", i2c_addr)
+            .withParameter("user_data", i2c_write_user_data)
+            .ignoreOtherParameters();
+        if (i2c_write_rc_2 == BH1750_I2C_RESULT_CODE_OK) {
+            /* Set five least significant bits of MTreg to 00101 */
+            uint8_t i2c_write_data_3 = 0x65;
+            mock()
+                .expectOneCall("mock_bh1750_i2c_write")
+                .withMemoryBufferParameter("data", &i2c_write_data_3, 1)
+                .withParameter("length", 1)
+                .withParameter("i2c_addr", i2c_addr)
+                .withParameter("user_data", i2c_write_user_data)
+                .ignoreOtherParameters();
+        }
+    }
+
+    void *complete_cb_user_data_expected = (void *)0x14;
+    uint8_t rc = bh1750_init(bh1750, complete_cb, complete_cb_user_data_expected);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc);
+    i2c_write_complete_cb(i2c_write_rc_1, i2c_write_complete_cb_user_data);
+    if (i2c_write_rc_1 == BH1750_I2C_RESULT_CODE_OK) {
+        i2c_write_complete_cb(i2c_write_rc_2, i2c_write_complete_cb_user_data);
+        if (i2c_write_rc_2 == BH1750_I2C_RESULT_CODE_OK) {
+            i2c_write_complete_cb(i2c_write_rc_3, i2c_write_complete_cb_user_data);
+        }
+    }
+
+    if (complete_cb) {
+        CHECK_EQUAL(1, complete_cb_call_count);
+        CHECK_EQUAL(expected_complete_cb_rc, complete_cb_result_code);
+        CHECK_EQUAL(complete_cb_user_data_expected, complete_cb_user_data);
+    }
+}
+
+TEST(BH1750, InitWrite1Fail)
+{
+    uint8_t i2c_write_rc_1 = BH1750_I2C_RESULT_CODE_ERR;
+    uint8_t i2c_write_rc_2 = BH1750_I2C_RESULT_CODE_ERR;
+    uint8_t i2c_write_rc_3 = BH1750_I2C_RESULT_CODE_ERR;
+    test_init(BH1750_TEST_DEFAULT_I2C_ADDR, i2c_write_rc_1, i2c_write_rc_2, i2c_write_rc_3, bh1750_complete_cb,
+              BH1750_RESULT_CODE_IO_ERR);
+}
+
+TEST(BH1750, InitWrite2Fail)
+{
+    uint8_t i2c_write_rc_1 = BH1750_I2C_RESULT_CODE_OK;
+    uint8_t i2c_write_rc_2 = BH1750_I2C_RESULT_CODE_ERR;
+    uint8_t i2c_write_rc_3 = BH1750_I2C_RESULT_CODE_ERR;
+    test_init(BH1750_TEST_DEFAULT_I2C_ADDR, i2c_write_rc_1, i2c_write_rc_2, i2c_write_rc_3, bh1750_complete_cb,
+              BH1750_RESULT_CODE_IO_ERR);
+}
+
+TEST(BH1750, InitWrite3Fail)
+{
+    uint8_t i2c_write_rc_1 = BH1750_I2C_RESULT_CODE_OK;
+    uint8_t i2c_write_rc_2 = BH1750_I2C_RESULT_CODE_OK;
+    uint8_t i2c_write_rc_3 = BH1750_I2C_RESULT_CODE_ERR;
+    test_init(BH1750_TEST_DEFAULT_I2C_ADDR, i2c_write_rc_1, i2c_write_rc_2, i2c_write_rc_3, bh1750_complete_cb,
+              BH1750_RESULT_CODE_IO_ERR);
+}
+
+TEST(BH1750, InitSuccess)
+{
+    uint8_t i2c_write_rc_1 = BH1750_I2C_RESULT_CODE_OK;
+    uint8_t i2c_write_rc_2 = BH1750_I2C_RESULT_CODE_OK;
+    uint8_t i2c_write_rc_3 = BH1750_I2C_RESULT_CODE_OK;
+    test_init(BH1750_TEST_DEFAULT_I2C_ADDR, i2c_write_rc_1, i2c_write_rc_2, i2c_write_rc_3, bh1750_complete_cb,
+              BH1750_RESULT_CODE_OK);
+}
+
+TEST(BH1750, InitCbNull)
+{
+    uint8_t i2c_write_rc_1 = BH1750_I2C_RESULT_CODE_OK;
+    uint8_t i2c_write_rc_2 = BH1750_I2C_RESULT_CODE_OK;
+    uint8_t i2c_write_rc_3 = BH1750_I2C_RESULT_CODE_OK;
+    test_init(BH1750_TEST_DEFAULT_I2C_ADDR, i2c_write_rc_1, i2c_write_rc_2, i2c_write_rc_3, NULL,
+              BH1750_RESULT_CODE_OK);
+}
+
+TEST(BH1750, InitAltI2cAddr)
+{
+    uint8_t i2c_write_rc_1 = BH1750_I2C_RESULT_CODE_OK;
+    uint8_t i2c_write_rc_2 = BH1750_I2C_RESULT_CODE_OK;
+    uint8_t i2c_write_rc_3 = BH1750_I2C_RESULT_CODE_OK;
+    test_init(BH1750_TEST_ALT_I2C_ADDR, i2c_write_rc_1, i2c_write_rc_2, i2c_write_rc_3, bh1750_complete_cb,
+              BH1750_RESULT_CODE_OK);
+}
+
+TEST(BH1750, InitSelfNull)
+{
+    test_invalid_arg(NULL, INVALID_ARG_TEST_TYPE_SEND_CMD_FUNC, (void *)bh1750_init);
+}

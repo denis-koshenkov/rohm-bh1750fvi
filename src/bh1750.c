@@ -19,6 +19,10 @@
 #define BH1750_MIN_MEAS_TIME 31
 #define BH1750_MAX_MEAS_TIME 254
 
+/* Default measurement time is 69 (0x45), in bin: 01000101 */
+#define BH1750_DEFAULT_MEAS_TIME_THREE_MSB 0x2U // bin: 010
+#define BH1750_DEFAULT_MEAS_TIME_FIVE_LSB 0x5U  // bin: 00101
+
 /**
  * @brief Check whether init config is valid.
  *
@@ -124,6 +128,9 @@ static void generic_i2c_complete_cb(uint8_t result_code, void *user_data)
 
 /**
  * @brief Start a sequence.
+ *
+ * Saves @p cb and @p user_data as sequence callback and user data, so that they can be executed once the sequence is
+ * complete.
  *
  * @param self BH1750 instance.
  * @param cb Callback to execute once the sequence is complete.
@@ -282,6 +289,44 @@ static void set_meas_time_part_2(uint8_t result_code, void *user_data)
     }
 }
 
+static void init_part_3(uint8_t result_code, void *user_data)
+{
+    BH1750 self = (BH1750)user_data;
+    if (!self) {
+        return;
+    }
+
+    if (result_code != BH1750_I2C_RESULT_CODE_OK) {
+        execute_complete_cb(self, BH1750_RESULT_CODE_IO_ERR);
+        return;
+    }
+
+    uint8_t rc = set_mtreg_low_bit(self, BH1750_DEFAULT_MEAS_TIME_FIVE_LSB, generic_i2c_complete_cb, (void *)self);
+    if (rc != BH1750_RESULT_CODE_OK) {
+        /* BH1750_DEFAULT_MEAS_TIME_FIVE_LSB > 31. This should never happen. */
+        execute_complete_cb(self, BH1750_RESULT_CODE_DRIVER_ERR);
+    }
+}
+
+static void init_part_2(uint8_t result_code, void *user_data)
+{
+    BH1750 self = (BH1750)user_data;
+    if (!self) {
+        return;
+    }
+
+    if (result_code != BH1750_I2C_RESULT_CODE_OK) {
+        execute_complete_cb(self, BH1750_RESULT_CODE_IO_ERR);
+        return;
+    }
+
+    uint8_t rc = set_mtreg_high_bit(self, BH1750_DEFAULT_MEAS_TIME_THREE_MSB, init_part_3, (void *)self);
+    if (rc != BH1750_RESULT_CODE_OK) {
+        /* BH1750_DEFAULT_MEAS_TIME_THREE_MSB > 7. This should never happen. */
+        execute_complete_cb(self, BH1750_RESULT_CODE_DRIVER_ERR);
+    }
+}
+
 uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg)
 {
     if (!inst || !is_valid_init_cfg(cfg)) {
@@ -297,6 +342,17 @@ uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg)
     (*inst)->i2c_write_user_data = cfg->i2c_write_user_data;
     (*inst)->i2c_addr = cfg->i2c_addr;
 
+    return BH1750_RESULT_CODE_OK;
+}
+
+uint8_t bh1750_init(BH1750 self, BH1750CompleteCb cb, void *user_data)
+{
+    if (!self) {
+        return BH1750_RESULT_CODE_INVALID_ARG;
+    }
+
+    start_sequence(self, (void *)cb, user_data);
+    send_power_on_cmd(self, init_part_2, (void *)self);
     return BH1750_RESULT_CODE_OK;
 }
 

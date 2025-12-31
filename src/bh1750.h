@@ -88,7 +88,37 @@ typedef struct {
 uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg);
 
 /**
+ * @brief Initialize a BH1750 instance.
+ *
+ * Performs the following steps:
+ * 1. Powers on BH1750 (equivalent to calling @ref bh1750_power_on).
+ * 2. Sets measurement time to 69 (default). Equivalent to calling @ref bh1750_set_measurement_time with "meas_time"
+ * parameter equal to 69.
+ *
+ * Once the init sequence is complete, or an error occurs, @p cb is executed. "result_code" paramter of @p cb indicates
+ * success or reason for failure of the init sequence:
+ * - @ref SHT3X_RESULT_CODE_OK Successfully performed the init sequence.
+ * - @ref SHT3X_RESULT_CODE_IO_ERR I2C One of the I2C transactions in the init sequence failed.
+ * - @ref BH1750_RESULT_CODE_DRIVER_ERR Something went wrong with the code of this driver.
+ *
+ * @param[in] self BH1750 instance created by @ref bh1750_create.
+ * @param[in] cb Callback to execute once init is complete.
+ * @param[in] user_data User data to pass to @p cb.
+ *
+ * @retval BH1750_RESULT_CODE_OK Successfully initiated the first step of init sequence.
+ * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL.
+ */
+uint8_t bh1750_init(BH1750 self, BH1750CompleteCb cb, void *user_data);
+
+/**
  * @brief Power on BH1750 device.
+ *
+ * Sends the "power on" command to BH1750.
+ *
+ * Once the power on sequence is complete, or an error occurs, @p cb is executed. "result_code" paramter of @p cb
+ * indicates success or reason for failure of the power on sequence:
+ * - @ref SHT3X_RESULT_CODE_OK Successfully performed the power on sequence.
+ * - @ref SHT3X_RESULT_CODE_IO_ERR I2C transaction to send the power on command failed.
  *
  * @param[in] self BH1750 instance created by @ref bh1750_create.
  * @param[in] cb Callback to execute once power on is complete.
@@ -101,6 +131,13 @@ uint8_t bh1750_power_on(BH1750 self, BH1750CompleteCb cb, void *user_data);
 
 /**
  * @brief Power down BH1750 device.
+ *
+ * Sends the "power down" command to BH1750.
+ *
+ * Once the power down sequence is complete, or an error occurs, @p cb is executed. "result_code" paramter of @p cb
+ * indicates success or reason for failure of the power down sequence:
+ * - @ref SHT3X_RESULT_CODE_OK Successfully performed the power down sequence.
+ * - @ref SHT3X_RESULT_CODE_IO_ERR I2C transaction to send the power down command failed.
  *
  * @param[in] self BH1750 instance created by @ref bh1750_create.
  * @param[in] cb Callback to execute once power down is complete.
@@ -116,6 +153,13 @@ uint8_t bh1750_power_down(BH1750 self, BH1750CompleteCb cb, void *user_data);
  *
  * This function removes the previous measurement result. It resets the internal illuminance data register in the BH1750
  * device.
+ *
+ * Sends the "reset" command to BH1750.
+ *
+ * Once the reset sequence is complete, or an error occurs, @p cb is executed. "result_code" paramter of @p cb
+ * indicates success or reason for failure of the reset sequence:
+ * - @ref SHT3X_RESULT_CODE_OK Successfully performed the reset sequence.
+ * - @ref SHT3X_RESULT_CODE_IO_ERR I2C transaction to send the reset command failed.
  *
  * @param[in] self BH1750 instance created by @ref bh1750_create.
  * @param[in] cb Callback to execute once reset is complete.
