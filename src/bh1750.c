@@ -224,11 +224,19 @@ static void send_start_continuous_meas_cmd(BH1750 self, uint8_t meas_mode, BH175
  * three bits.
  * @param cb Callback to execute once the command is sent.
  * @param user_data User data to pass to @p cb.
+ *
+ * @retval BH1750_RESULT_CODE_OK Successfully sent the command to set high bits of MTreg.
+ * @retval BH1750_RESULT_CODE_INVALID_ARG @p val is > 7, so it cannot fit into three bits.
  */
-static void set_mtreg_high_bit(BH1750 self, uint8_t val, BH1750_I2CCompleteCb cb, void *user_data)
+static uint8_t set_mtreg_high_bit(BH1750 self, uint8_t val, BH1750_I2CCompleteCb cb, void *user_data)
 {
+    if (val > 7) {
+        return BH1750_RESULT_CODE_INVALID_ARG;
+    }
+
     uint8_t cmd = ((uint8_t)BH1750_SET_MTREG_HIGH_BIT_CMD) | val;
     self->i2c_write(&cmd, 1, self->i2c_addr, self->i2c_write_user_data, cb, user_data);
+    return BH1750_RESULT_CODE_OK;
 }
 
 /**
@@ -334,6 +342,10 @@ uint8_t bh1750_set_measurement_time(BH1750 self, uint8_t meas_time, BH1750Comple
     self->meas_time = meas_time;
 
     uint8_t meas_time_three_msb = get_three_msb_of_meas_time(meas_time);
-    set_mtreg_high_bit(self, meas_time_three_msb, set_meas_time_part_2, (void *)self);
+    uint8_t rc = set_mtreg_high_bit(self, meas_time_three_msb, set_meas_time_part_2, (void *)self);
+    if (rc != BH1750_RESULT_CODE_OK) {
+        /* If we are here, this means that get_three_msb_of_meas_time returned a value > 7. This should never happen. */
+        return BH1750_RESULT_CODE_DRIVER_ERR;
+    }
     return BH1750_RESULT_CODE_OK;
 }
