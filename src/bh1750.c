@@ -15,6 +15,10 @@
 /* 01100000 in binary. The 3 MSbs are a fixed command to set 5 LSBs of MTreg. */
 #define BH1750_SET_MTREG_LOW_BIT_CMD 0x60U
 
+/* Taken from the BH1750 datasheet, p. 11 */
+#define BH1750_MIN_MEAS_TIME 31
+#define BH1750_MAX_MEAS_TIME 254
+
 /**
  * @brief Check whether init config is valid.
  *
@@ -45,6 +49,19 @@ static bool is_valid_meas_mode(uint8_t meas_mode)
         || (meas_mode == BH1750_MEAS_MODE_L_RES)
     );
     // clang-format on
+}
+
+/**
+ * @brief Check whether measurement time is within allowed range.
+ *
+ * @param meas_time Measurement time.
+ *
+ * @retval true Measurement time is valid.
+ * @retval false Measurement time is invalid.
+ */
+static bool is_valid_meas_time(uint8_t meas_time)
+{
+    return ((meas_time >= BH1750_MIN_MEAS_TIME) && (meas_time <= BH1750_MAX_MEAS_TIME));
 }
 
 /**
@@ -309,7 +326,7 @@ uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH17
 
 uint8_t bh1750_set_measurement_time(BH1750 self, uint8_t meas_time, BH1750CompleteCb cb, void *user_data)
 {
-    if (!self) {
+    if (!self || !is_valid_meas_time(meas_time)) {
         return BH1750_RESULT_CODE_INVALID_ARG;
     }
 

@@ -487,3 +487,21 @@ TEST(BH1750, SetMeasTimeSelfNull)
     uint8_t meas_time = 69;
     test_invalid_arg(NULL, INVALID_ARG_TEST_TYPE_SET_MEAS_TIME, (void *)&meas_time);
 }
+
+TEST(BH1750, SetMeasTimeInvalMeasTime)
+{
+    uint8_t meas_time = 30;
+    test_invalid_arg(&bh1750, INVALID_ARG_TEST_TYPE_SET_MEAS_TIME, (void *)&meas_time);
+}
+
+TEST(BH1750, SetMeasTimeInvalMeasTime2)
+{
+    uint8_t meas_time = 255;
+    test_invalid_arg(&bh1750, INVALID_ARG_TEST_TYPE_SET_MEAS_TIME, (void *)&meas_time);
+}
+
+TEST(BH1750, SetMeasTimeInvalMeasTime3)
+{
+    uint8_t meas_time = 0;
+    test_invalid_arg(&bh1750, INVALID_ARG_TEST_TYPE_SET_MEAS_TIME, (void *)&meas_time);
+}
