@@ -173,8 +173,51 @@ uint8_t bh1750_power_down(BH1750 self, BH1750CompleteCb cb, void *user_data);
  */
 uint8_t bh1750_reset(BH1750 self, BH1750CompleteCb cb, void *user_data);
 
+/**
+ * @brief Start continuous measurement of light intensity.
+ *
+ * Sends a command to BH1750 to start continuous measurement. @p meas_mode determines the mode of continuous
+ * measurement.
+ *
+ * Once the start continuous measurement sequence is complete, or an error occurs, @p cb is executed. "result_code"
+ * paramter of @p cb indicates success or reason for failure of the start continuous measurement sequence:
+ * - @ref SHT3X_RESULT_CODE_OK Successfully performed the start continuous measurement sequence.
+ * - @ref SHT3X_RESULT_CODE_IO_ERR I2C transaction to send the start continuous measurement command failed.
+ *
+ * @param[in] self BH1750 instance created by @ref bh1750_create.
+ * @param[in] meas_mode Continuous measurement mode. Use @ref BH1750MeasMode.
+ * @param[in] cb Callback to execute once start continuous measurement sequence is complete.
+ * @param[in] user_data User data to pass to @p cb.
+ *
+ * @retval BH1750_RESULT_CODE_OK Successfully initiated start continuous measurement.
+ * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL, or @p meas_mode is not a valid measurement mode.
+ */
 uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH1750CompleteCb cb, void *user_data);
 
+/**
+ * @brief Set measurement time.
+ *
+ * This function sends two commands:
+ * 1. Set three high bits of measurement time register.
+ * 2. Set five low bits of measurement time register.
+ *
+ * The three high bits and five low bits are taken from the @p meas_time value.
+ *
+ * Once the set measurement time sequence is complete, or an error occurs, @p cb is executed. "result_code"
+ * paramter of @p cb indicates success or reason for failure of the set measurement time sequence:
+ * - @ref SHT3X_RESULT_CODE_OK Successfully performed the set measurement time sequence.
+ * - @ref SHT3X_RESULT_CODE_IO_ERR One of the I2C transactions failed.
+ * - @ref BH1750_RESULT_CODE_DRIVER_ERR Something went wrong in the code of this driver.
+ *
+ * @param[in] self BH1750 instance created by @ref bh1750_create.
+ * @param[in] meas_time Measurement time to set. According to the datasheet: 31 <= @p meas_time <= 254.
+ * @param[in] cb Callback to execute once set measurement time sequence is complete.
+ * @param[in] user_data User data to pass to @p cb.
+ *
+ * @retval BH1750_RESULT_CODE_OK Successfully initiated set measurement time.
+ * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL, or @p meas_time is not within the allowed range.
+ * @retval BH1750_RESULT_CODE_DRIVER_ERR Something went weong in the code of this driver.
+ */
 uint8_t bh1750_set_measurement_time(BH1750 self, uint8_t meas_time, BH1750CompleteCb cb, void *user_data);
 
 #ifdef __cplusplus
