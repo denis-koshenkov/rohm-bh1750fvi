@@ -431,6 +431,7 @@ static void test_set_meas_time(uint8_t i2c_addr, uint8_t meas_time, uint8_t *i2c
 
 TEST(BH1750, SetMeasTimeWrite1Fail)
 {
+    /* bin: 01000101 */
     uint8_t meas_time = 69;
     /* Set three most significant bits of MTreg to 010 */
     uint8_t i2c_write_data_1 = 0x42;
@@ -440,6 +441,7 @@ TEST(BH1750, SetMeasTimeWrite1Fail)
 
 TEST(BH1750, SetMeasTimeWrite2Fail)
 {
+    /* bin: 10001010 */
     uint8_t meas_time = 138;
     /* Set three most significant bits of MTreg to 100 */
     uint8_t i2c_write_data_1 = 0x44;
@@ -451,6 +453,7 @@ TEST(BH1750, SetMeasTimeWrite2Fail)
 
 TEST(BH1750, SetMeasTimeSuccess)
 {
+    /* bin: 00011111 */
     uint8_t meas_time = 31;
     /* Set three most significant bits of MTreg to 000 */
     uint8_t i2c_write_data_1 = 0x40;
@@ -460,8 +463,33 @@ TEST(BH1750, SetMeasTimeSuccess)
                        &i2c_write_data_2, BH1750_I2C_RESULT_CODE_OK, bh1750_complete_cb, BH1750_RESULT_CODE_OK);
 }
 
+TEST(BH1750, SetMeasTimeSuccess254)
+{
+    /* bin: 11111110 */
+    uint8_t meas_time = 254;
+    /* Set three most significant bits of MTreg to 111 */
+    uint8_t i2c_write_data_1 = 0x47;
+    /* Set five least significant bits of MTreg to 11110 */
+    uint8_t i2c_write_data_2 = 0x7E;
+    test_set_meas_time(BH1750_TEST_DEFAULT_I2C_ADDR, meas_time, &i2c_write_data_1, BH1750_I2C_RESULT_CODE_OK,
+                       &i2c_write_data_2, BH1750_I2C_RESULT_CODE_OK, bh1750_complete_cb, BH1750_RESULT_CODE_OK);
+}
+
+TEST(BH1750, SetMeasTimeSuccess44)
+{
+    /* bin: 00101100 */
+    uint8_t meas_time = 44;
+    /* Set three most significant bits of MTreg to 001 */
+    uint8_t i2c_write_data_1 = 0x41;
+    /* Set five least significant bits of MTreg to 01100 */
+    uint8_t i2c_write_data_2 = 0x6C;
+    test_set_meas_time(BH1750_TEST_DEFAULT_I2C_ADDR, meas_time, &i2c_write_data_1, BH1750_I2C_RESULT_CODE_OK,
+                       &i2c_write_data_2, BH1750_I2C_RESULT_CODE_OK, bh1750_complete_cb, BH1750_RESULT_CODE_OK);
+}
+
 TEST(BH1750, SetMeasTimeCbNull)
 {
+    /* bin: 00011111 */
     uint8_t meas_time = 31;
     /* Set three most significant bits of MTreg to 000 */
     uint8_t i2c_write_data_1 = 0x40;
@@ -473,6 +501,7 @@ TEST(BH1750, SetMeasTimeCbNull)
 
 TEST(BH1750, SetMeasTimeAltI2cAddr)
 {
+    /* bin: 00011111 */
     uint8_t meas_time = 31;
     /* Set three most significant bits of MTreg to 000 */
     uint8_t i2c_write_data_1 = 0x40;
