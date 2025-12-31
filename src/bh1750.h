@@ -130,6 +130,8 @@ uint8_t bh1750_reset(BH1750 self, BH1750CompleteCb cb, void *user_data);
 
 uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH1750CompleteCb cb, void *user_data);
 
+uint8_t bh1750_set_measurement_time(BH1750 self, uint8_t meas_time, BH1750CompleteCb cb, void *user_data);
+
 #ifdef __cplusplus
 }
 #endif

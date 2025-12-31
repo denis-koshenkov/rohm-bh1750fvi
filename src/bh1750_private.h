@@ -31,6 +31,8 @@ struct BH1750Struct {
     void *seq_cb_user_data;
     /** @brief I2C address of this BH1750 instance. */
     uint8_t i2c_addr;
+    /* Used only in the set_meas_time sequence. */
+    uint8_t meas_time;
 };
 
 #ifdef __cplusplus
