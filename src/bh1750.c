@@ -226,14 +226,14 @@ static void send_start_continuous_meas_cmd(BH1750 self, uint8_t meas_mode, BH175
  * @param user_data User data to pass to @p cb.
  *
  * @retval BH1750_RESULT_CODE_OK Successfully sent the command to set high bits of MTreg.
- * @retval BH1750_RESULT_CODE_INVALID_ARG @p val is > 7, so it cannot fit into three bits.
+ * @retval BH1750_RESULT_CODE_INVALID_ARG @p val is > 7, so it cannot fit into three bits. @p cb will not be executed,
+ * because the command was not sent.
  */
 static uint8_t set_mtreg_high_bit(BH1750 self, uint8_t val, BH1750_I2CCompleteCb cb, void *user_data)
 {
     if (val > 7) {
         return BH1750_RESULT_CODE_INVALID_ARG;
     }
-
     uint8_t cmd = ((uint8_t)BH1750_SET_MTREG_HIGH_BIT_CMD) | val;
     self->i2c_write(&cmd, 1, self->i2c_addr, self->i2c_write_user_data, cb, user_data);
     return BH1750_RESULT_CODE_OK;
@@ -247,11 +247,19 @@ static uint8_t set_mtreg_high_bit(BH1750 self, uint8_t val, BH1750_I2CCompleteCb
  * five bits.
  * @param cb Callback to execute once the command is sent.
  * @param user_data User data to pass to @p cb.
+ *
+ * @retval BH1750_RESULT_CODE_OK Successfully sent the command to set low bits of MTreg.
+ * @retval BH1750_RESULT_CODE_INVALID_ARG @p val is > 31, so it cannot fit into five bits. @p cb will not be executed,
+ * because the command was not sent.
  */
-static void set_mtreg_low_bit(BH1750 self, uint8_t val, BH1750_I2CCompleteCb cb, void *user_data)
+static uint8_t set_mtreg_low_bit(BH1750 self, uint8_t val, BH1750_I2CCompleteCb cb, void *user_data)
 {
+    if (val > 31) {
+        return BH1750_RESULT_CODE_INVALID_ARG;
+    }
     uint8_t cmd = ((uint8_t)BH1750_SET_MTREG_LOW_BIT_CMD) | val;
     self->i2c_write(&cmd, 1, self->i2c_addr, self->i2c_write_user_data, cb, user_data);
+    return BH1750_I2C_RESULT_CODE_OK;
 }
 
 static void set_meas_time_part_2(uint8_t result_code, void *user_data)
@@ -267,7 +275,11 @@ static void set_meas_time_part_2(uint8_t result_code, void *user_data)
     }
 
     uint8_t meas_time_five_lsb = get_five_lsb_of_meas_time(self->meas_time);
-    set_mtreg_low_bit(self, meas_time_five_lsb, generic_i2c_complete_cb, (void *)self);
+    uint8_t rc = set_mtreg_low_bit(self, meas_time_five_lsb, generic_i2c_complete_cb, (void *)self);
+    if (rc != BH1750_RESULT_CODE_OK) {
+        /* get_five_lsb_of_meas_time returned a value > 31. This should never happen. */
+        execute_complete_cb(self, BH1750_RESULT_CODE_DRIVER_ERR);
+    }
 }
 
 uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg)
