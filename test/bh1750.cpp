@@ -720,3 +720,32 @@ TEST(BH1750, ReadContMeasReadFail)
     };
     test_read_cont_meas(&cfg);
 }
+
+TEST(BH1750, ReadContMeasSuccess)
+{
+    /* Example from the datasheet, p. 7 */
+    uint8_t i2c_read_data[] = {0x83, 0x90};
+    TestReadContMeasCfg cfg = {
+        .i2c_addr = BH1750_TEST_DEFAULT_I2C_ADDR,
+        .i2c_read_data = i2c_read_data,
+        .i2c_read_rc = BH1750_I2C_RESULT_CODE_OK,
+        .expected_meas_lx = 28067,
+        .complete_cb = bh1750_complete_cb,
+        .expected_complete_cb_rc = BH1750_RESULT_CODE_OK,
+    };
+    test_read_cont_meas(&cfg);
+}
+
+TEST(BH1750, ReadContMeasSuccess2)
+{
+    uint8_t i2c_read_data[] = {0x75, 0x4F};
+    TestReadContMeasCfg cfg = {
+        .i2c_addr = BH1750_TEST_DEFAULT_I2C_ADDR,
+        .i2c_read_data = i2c_read_data,
+        .i2c_read_rc = BH1750_I2C_RESULT_CODE_OK,
+        .expected_meas_lx = 25026,
+        .complete_cb = bh1750_complete_cb,
+        .expected_complete_cb_rc = BH1750_RESULT_CODE_OK,
+    };
+    test_read_cont_meas(&cfg);
+}

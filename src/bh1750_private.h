@@ -33,6 +33,8 @@ struct BH1750Struct {
     void *seq_cb;
     /** @brief User data to pass to seq_cb. */
     void *seq_cb_user_data;
+    /** @brief Address to write measurement in lx. Only valid for read_cont_meas sequence. */
+    uint32_t *meas_p;
     /** @brief I2C address of this BH1750 instance. */
     uint8_t i2c_addr;
     /** @brief Used only in the set_meas_time sequence. */

@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 
 #include "bh1750.h"
 #include "bh1750_private.h"
@@ -66,6 +67,18 @@ static bool is_valid_meas_mode(uint8_t meas_mode)
 static bool is_valid_meas_time(uint8_t meas_time)
 {
     return ((meas_time >= BH1750_MIN_MEAS_TIME) && (meas_time <= BH1750_MAX_MEAS_TIME));
+}
+
+/**
+ * @brief Convert two bytes in big endian to an integer of type uint16_t.
+ *
+ * @param[in] bytes The two bytes at this address are used for conversion.
+ *
+ * @return uint16_t Resulting integer.
+ */
+static uint16_t two_big_endian_bytes_to_uint16(const uint8_t *const bytes)
+{
+    return (((uint16_t)(bytes[0])) << 8) | ((uint16_t)(bytes[1]));
 }
 
 /**
@@ -320,6 +333,24 @@ static void init_part_3(uint8_t result_code, void *user_data)
     }
 }
 
+static void read_continuous_measurement_part_2(uint8_t result_code, void *user_data)
+{
+    BH1750 self = (BH1750)user_data;
+    if (!self) {
+        return;
+    }
+
+    if (result_code != BH1750_I2C_RESULT_CODE_OK) {
+        execute_complete_cb(self, BH1750_RESULT_CODE_IO_ERR);
+        return;
+    }
+
+    uint16_t raw_meas = two_big_endian_bytes_to_uint16(self->read_buf);
+    uint32_t meas_lx = lroundf(((float)raw_meas) / 1.2f);
+    *(self->meas_p) = meas_lx;
+    execute_complete_cb(self, BH1750_RESULT_CODE_OK);
+}
+
 static void init_part_2(uint8_t result_code, void *user_data)
 {
     BH1750 self = (BH1750)user_data;
@@ -417,7 +448,8 @@ uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH17
 uint8_t bh1750_read_continuous_measurement(BH1750 self, uint32_t *const meas_lx, BH1750CompleteCb cb, void *user_data)
 {
     start_sequence(self, (void *)cb, user_data);
-    read_meas(self, generic_i2c_complete_cb, (void *)self);
+    self->meas_p = meas_lx;
+    read_meas(self, read_continuous_measurement_part_2, (void *)self);
     return BH1750_RESULT_CODE_OK;
 }
 
