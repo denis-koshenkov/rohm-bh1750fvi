@@ -201,7 +201,7 @@ static void send_reset_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user_data
  * @param cb Callback to execute once the read command is sent.
  * @param user_data User data to pass to @p cb.
  */
-static void read_meas(BH1750 self, BH1750_I2CCompleteCb cb, void *user_data)
+static void send_read_meas_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user_data)
 {
     self->i2c_read(self->read_buf, 2, self->i2c_addr, self->i2c_read_user_data, cb, user_data);
 }
@@ -449,7 +449,7 @@ uint8_t bh1750_read_continuous_measurement(BH1750 self, uint32_t *const meas_lx,
 {
     start_sequence(self, (void *)cb, user_data);
     self->meas_p = meas_lx;
-    read_meas(self, read_continuous_measurement_part_2, (void *)self);
+    send_read_meas_cmd(self, read_continuous_measurement_part_2, (void *)self);
     return BH1750_RESULT_CODE_OK;
 }
 
