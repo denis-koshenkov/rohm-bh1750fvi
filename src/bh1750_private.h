@@ -22,6 +22,10 @@ struct BH1750Struct {
     BH1750_I2CWrite i2c_write;
     /** @brief User data to pass to i2c_write. */
     void *i2c_write_user_data;
+    /** @brief User-defined I2C read function that was passed to bh1750_create. */
+    BH1750_I2CWrite i2c_read;
+    /** @brief User data to pass to i2c_read. */
+    void *i2c_read_user_data;
     /** @brief Callback to execute once current sequence is complete.
      *
      * void * because different sequences types might require different callback types to be executed.
@@ -31,8 +35,10 @@ struct BH1750Struct {
     void *seq_cb_user_data;
     /** @brief I2C address of this BH1750 instance. */
     uint8_t i2c_addr;
-    /* Used only in the set_meas_time sequence. */
+    /** @brief Used only in the set_meas_time sequence. */
     uint8_t meas_time;
+    /** @brief This buffer is passed to i2c_read function to save the received data. */
+    uint8_t read_buf[2];
 };
 
 #ifdef __cplusplus

@@ -182,6 +182,18 @@ static void send_reset_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user_data
 }
 
 /**
+ * @brief Send a I2C read command to read light intensity measurement.
+ *
+ * @param self BH1750 instance.
+ * @param cb Callback to execute once the read command is sent.
+ * @param user_data User data to pass to @p cb.
+ */
+static void read_meas(BH1750 self, BH1750_I2CCompleteCb cb, void *user_data)
+{
+    self->i2c_read(self->read_buf, 2, self->i2c_addr, self->i2c_read_user_data, cb, user_data);
+}
+
+/**
  * @brief Get "start continuous measurement" command code.
  *
  * @param meas_mode Measurement mode.
@@ -340,6 +352,8 @@ uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg)
 
     (*inst)->i2c_write = cfg->i2c_write;
     (*inst)->i2c_write_user_data = cfg->i2c_write_user_data;
+    (*inst)->i2c_read = cfg->i2c_read;
+    (*inst)->i2c_read_user_data = cfg->i2c_read_user_data;
     (*inst)->i2c_addr = cfg->i2c_addr;
 
     return BH1750_RESULT_CODE_OK;
@@ -397,6 +411,13 @@ uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH17
 
     start_sequence(self, (void *)cb, user_data);
     send_start_continuous_meas_cmd(self, meas_mode, generic_i2c_complete_cb, (void *)self);
+    return BH1750_RESULT_CODE_OK;
+}
+
+uint8_t bh1750_read_continuous_measurement(BH1750 self, uint32_t *const meas_lx, BH1750CompleteCb cb, void *user_data)
+{
+    start_sequence(self, (void *)cb, user_data);
+    read_meas(self, generic_i2c_complete_cb, (void *)self);
     return BH1750_RESULT_CODE_OK;
 }
 

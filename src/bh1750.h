@@ -70,6 +70,8 @@ typedef struct {
     void *get_instance_memory_user_data;
     BH1750_I2CWrite i2c_write;
     void *i2c_write_user_data;
+    BH1750_I2CWrite i2c_read;
+    void *i2c_read_user_data;
     uint8_t i2c_addr;
 } BH1750InitConfig;
 
@@ -193,6 +195,8 @@ uint8_t bh1750_reset(BH1750 self, BH1750CompleteCb cb, void *user_data);
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL, or @p meas_mode is not a valid measurement mode.
  */
 uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH1750CompleteCb cb, void *user_data);
+
+uint8_t bh1750_read_continuous_measurement(BH1750 self, uint32_t *const meas_lx, BH1750CompleteCb cb, void *user_data);
 
 /**
  * @brief Set measurement time.

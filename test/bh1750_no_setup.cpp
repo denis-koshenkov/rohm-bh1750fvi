@@ -41,9 +41,9 @@ static void populate_default_init_cfg(BH1750InitConfig *const cfg)
     cfg->get_instance_memory_user_data = get_instance_memory_user_data;
     cfg->i2c_write = mock_bh1750_i2c_write;
     cfg->i2c_write_user_data = i2c_write_user_data;
+    cfg->i2c_read = mock_bh1750_i2c_read;
+    cfg->i2c_read_user_data = i2c_read_user_data;
     // TODO: uncomment once these fields are added to the struct
-    // cfg->i2c_read = mock_bh1750_i2c_read;
-    // cfg->i2c_read_user_data = i2c_read_user_data;
     // cfg->start_timer = mock_bh1750_start_timer;
     // cfg->start_timer_user_data = start_timer_user_data;
     cfg->i2c_addr = BH1750_TEST_DEFAULT_I2C_ADDR;
