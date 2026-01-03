@@ -41,6 +41,8 @@ struct BH1750Struct {
     uint8_t meas_time;
     /** @brief This buffer is passed to i2c_read function to save the received data. */
     uint8_t read_buf[2];
+    /** @brief Whether continuous measurement is currently ongoing. */
+    bool cont_meas_ongoing;
 };
 
 #ifdef __cplusplus

@@ -370,6 +370,23 @@ static void init_part_2(uint8_t result_code, void *user_data)
     }
 }
 
+static void start_continuous_measurement_part_2(uint8_t result_code, void *user_data)
+{
+    BH1750 self = (BH1750)user_data;
+    if (!self) {
+        return;
+    }
+
+    uint8_t rc;
+    if (result_code == BH1750_I2C_RESULT_CODE_OK) {
+        rc = BH1750_RESULT_CODE_OK;
+        self->cont_meas_ongoing = true;
+    } else {
+        rc = BH1750_RESULT_CODE_IO_ERR;
+    }
+    execute_complete_cb(self, rc);
+}
+
 uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg)
 {
     if (!inst || !is_valid_init_cfg(cfg)) {
@@ -386,6 +403,7 @@ uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg)
     (*inst)->i2c_read = cfg->i2c_read;
     (*inst)->i2c_read_user_data = cfg->i2c_read_user_data;
     (*inst)->i2c_addr = cfg->i2c_addr;
+    (*inst)->cont_meas_ongoing = false;
 
     return BH1750_RESULT_CODE_OK;
 }
@@ -441,7 +459,7 @@ uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH17
     }
 
     start_sequence(self, (void *)cb, user_data);
-    send_start_continuous_meas_cmd(self, meas_mode, generic_i2c_complete_cb, (void *)self);
+    send_start_continuous_meas_cmd(self, meas_mode, start_continuous_measurement_part_2, (void *)self);
     return BH1750_RESULT_CODE_OK;
 }
 
@@ -449,6 +467,9 @@ uint8_t bh1750_read_continuous_measurement(BH1750 self, uint32_t *const meas_lx,
 {
     if (!self || !meas_lx) {
         return BH1750_RESULT_CODE_INVALID_ARG;
+    }
+    if (!self->cont_meas_ongoing) {
+        return BH1750_RESULT_CODE_INVALID_USAGE;
     }
 
     start_sequence(self, (void *)cb, user_data);
