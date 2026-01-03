@@ -447,6 +447,10 @@ uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH17
 
 uint8_t bh1750_read_continuous_measurement(BH1750 self, uint32_t *const meas_lx, BH1750CompleteCb cb, void *user_data)
 {
+    if (!self || !meas_lx) {
+        return BH1750_RESULT_CODE_INVALID_ARG;
+    }
+
     start_sequence(self, (void *)cb, user_data);
     self->meas_p = meas_lx;
     send_read_meas_cmd(self, read_continuous_measurement_part_2, (void *)self);

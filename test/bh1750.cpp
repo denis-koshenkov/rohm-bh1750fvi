@@ -109,6 +109,8 @@ typedef enum {
     INVALID_ARG_TEST_TYPE_START_CONT_MEAS,
     /** Test bh1750_set_measurement_time function. */
     INVALID_ARG_TEST_TYPE_SET_MEAS_TIME,
+    /** Test bh1750_read_continuous_measurement function. */
+    INVALID_ARG_TEST_TYPE_READ_CONT_MEAS,
 } InvalidArgTestType;
 
 /**
@@ -178,6 +180,8 @@ static void test_send_cmd_func(bool is_start_meas_cmd, uint8_t meas_mode, SendCm
  * BH1750MeasMode. This defines the value of meas_mode argument passed to bh1750_start_continuous_measurement.
  * - INVALID_ARG_TEST_TYPE_SET_MEAS_TIME: Should be a pointer to uint8_t. The uint8_t value is interpreted as the
  * measurement time to pass to bh1750_set_measurement_time as the "meas_time" parameter.
+ * - INVALID_ARG_TEST_TYPE_READ_CONT_MEAS: Should be a pointer to uint32_t. This pointer is passed to the meas_lx
+ * parameter of bh1750_read_continuous_measurement. Can be NULL if needed for the test.
  */
 static void test_invalid_arg(BH1750 *inst_p, uint8_t test_type, void *test_type_context)
 {
@@ -205,6 +209,26 @@ static void test_invalid_arg(BH1750 *inst_p, uint8_t test_type, void *test_type_
         uint8_t *meas_time = (uint8_t *)test_type_context;
         rc = bh1750_set_measurement_time(inst, *meas_time, bh1750_complete_cb, complete_cb_user_data_expected);
         break;
+    }
+    case INVALID_ARG_TEST_TYPE_READ_CONT_MEAS: {
+        /* Start continuous measurement in H-resolution mode cmd */
+        uint8_t i2c_write_data = 0x10;
+        /* bh1750_start_continuous_measurement */
+        mock()
+            .expectOneCall("mock_bh1750_i2c_write")
+            .withMemoryBufferParameter("data", &i2c_write_data, 1)
+            .withParameter("length", 1)
+            .withParameter("i2c_addr", init_cfg.i2c_addr)
+            .withParameter("user_data", i2c_write_user_data)
+            .ignoreOtherParameters();
+
+        /* Before reading continuous measurement, it needs to be started */
+        uint8_t rc_start_meas = bh1750_start_continuous_measurement(bh1750, BH1750_MEAS_MODE_H_RES, NULL, NULL);
+        CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_start_meas);
+        i2c_write_complete_cb(BH1750_I2C_RESULT_CODE_OK, i2c_write_complete_cb_user_data);
+
+        uint32_t *meas_lx = (uint32_t *)test_type_context;
+        rc = bh1750_read_continuous_measurement(inst, meas_lx, bh1750_complete_cb, complete_cb_user_data_expected);
     }
     }
 
@@ -764,4 +788,46 @@ TEST(BH1750, ReadContMeasSuccess2)
         .expected_complete_cb_rc = BH1750_RESULT_CODE_OK,
     };
     test_read_cont_meas(&cfg);
+}
+
+TEST(BH1750, ReadContMeasCbNull)
+{
+    /* Example from the datasheet, p. 7 */
+    uint8_t i2c_read_data[] = {0x83, 0x90};
+    TestReadContMeasCfg cfg = {
+        .i2c_addr = BH1750_TEST_DEFAULT_I2C_ADDR,
+        .i2c_read_data = i2c_read_data,
+        .i2c_read_rc = BH1750_I2C_RESULT_CODE_OK,
+        .expected_meas_lx = 28067,
+        .complete_cb = NULL,
+        /* OK so that meas_lx is checked against the expected one */
+        .expected_complete_cb_rc = BH1750_RESULT_CODE_OK,
+    };
+    test_read_cont_meas(&cfg);
+}
+
+TEST(BH1750, ReadContMeasAltI2cAddr)
+{
+    /* Example from the datasheet, p. 7 */
+    uint8_t i2c_read_data[] = {0x83, 0x90};
+    TestReadContMeasCfg cfg = {
+        .i2c_addr = BH1750_TEST_ALT_I2C_ADDR,
+        .i2c_read_data = i2c_read_data,
+        .i2c_read_rc = BH1750_I2C_RESULT_CODE_OK,
+        .expected_meas_lx = 28067,
+        .complete_cb = bh1750_complete_cb,
+        .expected_complete_cb_rc = BH1750_RESULT_CODE_OK,
+    };
+    test_read_cont_meas(&cfg);
+}
+
+TEST(BH1750, ReadContMeasSelfNull)
+{
+    uint32_t meas_lx;
+    test_invalid_arg(NULL, INVALID_ARG_TEST_TYPE_READ_CONT_MEAS, &meas_lx);
+}
+
+TEST(BH1750, ReadContMeasMeasLxNull)
+{
+    test_invalid_arg(&bh1750, INVALID_ARG_TEST_TYPE_READ_CONT_MEAS, NULL);
 }
