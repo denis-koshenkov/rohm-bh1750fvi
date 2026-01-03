@@ -110,3 +110,14 @@ TEST(BH1750NoSetup, CreateReturnsInvalidArgI2cWriteNull)
 
     CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_ARG, rc);
 }
+
+TEST(BH1750NoSetup, CreateReturnsInvalidArgI2cReadNull)
+{
+    BH1750 bh1750;
+    BH1750InitConfig cfg;
+    populate_default_init_cfg(&cfg);
+    cfg.i2c_read = NULL;
+    uint8_t rc = bh1750_create(&bh1750, &cfg);
+
+    CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_ARG, rc);
+}
