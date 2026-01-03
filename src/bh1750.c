@@ -333,24 +333,6 @@ static void init_part_3(uint8_t result_code, void *user_data)
     }
 }
 
-static void read_continuous_measurement_part_2(uint8_t result_code, void *user_data)
-{
-    BH1750 self = (BH1750)user_data;
-    if (!self) {
-        return;
-    }
-
-    if (result_code != BH1750_I2C_RESULT_CODE_OK) {
-        execute_complete_cb(self, BH1750_RESULT_CODE_IO_ERR);
-        return;
-    }
-
-    uint16_t raw_meas = two_big_endian_bytes_to_uint16(self->read_buf);
-    uint32_t meas_lx = lroundf(((float)raw_meas) / 1.2f);
-    *(self->meas_p) = meas_lx;
-    execute_complete_cb(self, BH1750_RESULT_CODE_OK);
-}
-
 static void init_part_2(uint8_t result_code, void *user_data)
 {
     BH1750 self = (BH1750)user_data;
@@ -368,6 +350,24 @@ static void init_part_2(uint8_t result_code, void *user_data)
         /* BH1750_DEFAULT_MEAS_TIME_THREE_MSB > 7. This should never happen. */
         execute_complete_cb(self, BH1750_RESULT_CODE_DRIVER_ERR);
     }
+}
+
+static void read_continuous_measurement_part_2(uint8_t result_code, void *user_data)
+{
+    BH1750 self = (BH1750)user_data;
+    if (!self) {
+        return;
+    }
+
+    if (result_code != BH1750_I2C_RESULT_CODE_OK) {
+        execute_complete_cb(self, BH1750_RESULT_CODE_IO_ERR);
+        return;
+    }
+
+    uint16_t raw_meas = two_big_endian_bytes_to_uint16(self->read_buf);
+    uint32_t meas_lx = lroundf(((float)raw_meas) / 1.2f);
+    *(self->meas_p) = meas_lx;
+    execute_complete_cb(self, BH1750_RESULT_CODE_OK);
 }
 
 static void start_continuous_measurement_part_2(uint8_t result_code, void *user_data)
