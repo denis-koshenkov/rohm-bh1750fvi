@@ -5,6 +5,10 @@
 #include "bh1750.h"
 #include "bh1750_private.h"
 
+/** Result of (1.0f / 1.2f). Stored in a constant so that this math is not performed for every raw meas -> lx
+ * conversion. */
+#define BH1750_CONVERSION_MAGIC 0.8333333f
+
 #define BH1750_POWER_DOWN_CMD 0x0
 #define BH1750_POWER_ON_CMD 0x01
 #define BH1750_RESET_CMD 0x07
@@ -381,7 +385,18 @@ static uint8_t convert_raw_meas_to_lx(BH1750 self, uint16_t raw_meas, uint32_t *
         /* Division by 0 safety check */
         return BH1750_RESULT_CODE_INVALID_USAGE;
     }
-    *meas_lx = lroundf(raw_meas * ((1.0f / 1.2f) * (69.0f / (self->meas_time))));
+    switch (self->meas_mode) {
+    case BH1750_MEAS_MODE_H_RES:
+        *meas_lx = lroundf(raw_meas * (BH1750_CONVERSION_MAGIC * (69.0f / (self->meas_time))));
+        break;
+    case BH1750_MEAS_MODE_H_RES2:
+        *meas_lx = lroundf(raw_meas * ((BH1750_CONVERSION_MAGIC * (69.0f / (self->meas_time))) / 2.0f));
+        break;
+    default:
+        /* Invalid measurement mode */
+        return BH1750_RESULT_CODE_DRIVER_ERR;
+    }
+
     return BH1750_RESULT_CODE_OK;
 }
 
@@ -501,6 +516,7 @@ uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH17
     }
 
     start_sequence(self, (void *)cb, user_data);
+    self->meas_mode = meas_mode;
     send_start_continuous_meas_cmd(self, meas_mode, start_continuous_measurement_part_2, (void *)self);
     return BH1750_RESULT_CODE_OK;
 }

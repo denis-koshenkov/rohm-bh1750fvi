@@ -996,3 +996,21 @@ TEST(BH1750, ReadContMeasHResMeasTime138)
     test_cont_meas_changes_with_meas_time(meas_time, &i2c_write_data_1, &i2c_write_data_2, meas_mode, &i2c_write_data_3,
                                           i2c_read_data, expected_meas_lx);
 }
+
+TEST(BH1750, ReadContMeasHRes2MeasTime138)
+{
+    /* bin: 10001010 */
+    uint8_t meas_time = 138;
+    /* Set three most significant bits of MTreg to 100 */
+    uint8_t i2c_write_data_1 = 0x44;
+    /* Set five least significant bits of MTreg to 01010 */
+    uint8_t i2c_write_data_2 = 0x6A;
+    uint8_t meas_mode = BH1750_MEAS_MODE_H_RES2;
+    /* Start continuous measurement in H-resolution mode 2 cmd */
+    uint8_t i2c_write_data_3 = 0x11;
+    /* Example from the datasheet, p. 7 */
+    uint8_t i2c_read_data[] = {0x83, 0x90};
+    uint32_t expected_meas_lx = 7017;
+    test_cont_meas_changes_with_meas_time(meas_time, &i2c_write_data_1, &i2c_write_data_2, meas_mode, &i2c_write_data_3,
+                                          i2c_read_data, expected_meas_lx);
+}

@@ -43,6 +43,9 @@ struct BH1750Struct {
     uint8_t read_buf[2];
     /** @brief Whether continuous measurement is currently ongoing. */
     bool cont_meas_ongoing;
+    /** @brief Measurement mode for ongoing continuous measurement. Only valid if cont_meas_ongoing is true. One of @ref
+     * BH1750MeasMode. */
+    uint8_t meas_mode;
     /** @brief Current measurement time set in Mtreg.
      *
      * Used for converting raw measurements to light intensity in lx.
