@@ -299,6 +299,42 @@ static uint8_t set_mtreg_low_bit(BH1750 self, uint8_t val, BH1750_I2CCompleteCb 
     return BH1750_I2C_RESULT_CODE_OK;
 }
 
+/**
+ * @brief Convert raw measurement to illuminance in lx.
+ *
+ * @param[in] self BH1750 instance.
+ * @param[in] raw_meas Raw measurement
+ * @param[out] meas_lx Resulting measurement in lx is written here.
+ *
+ * @retval BH1750_RESULT_CODE_OK Successfully converted raw measurement to illuminance in lx.
+ * @retval BH1750_RESULT_CODE_INVALID_USAGE self->meas_time is 0. Cannot convert, because we need to divide by
+ * self->meas_time. self->meas_time should never be 0.
+ * @retval BH1750_RESULT_CODE_DRIVER_ERR Something went wrong with the code of this driver.
+ */
+static uint8_t convert_raw_meas_to_lx(BH1750 self, uint16_t raw_meas, uint32_t *const meas_lx)
+{
+    if (self->meas_time == 0) {
+        /* Division by 0 safety check */
+        return BH1750_RESULT_CODE_INVALID_USAGE;
+    }
+    switch (self->meas_mode) {
+    case BH1750_MEAS_MODE_H_RES:
+        *meas_lx = lroundf(raw_meas * (BH1750_CONVERSION_MAGIC * (69.0f / (self->meas_time))));
+        break;
+    case BH1750_MEAS_MODE_H_RES2:
+        *meas_lx = lroundf(raw_meas * ((BH1750_CONVERSION_MAGIC * (69.0f / (self->meas_time))) / 2.0f));
+        break;
+    case BH1750_MEAS_MODE_L_RES:
+        *meas_lx = lroundf(raw_meas * BH1750_CONVERSION_MAGIC);
+        break;
+    default:
+        /* Invalid measurement mode */
+        return BH1750_RESULT_CODE_DRIVER_ERR;
+    }
+
+    return BH1750_RESULT_CODE_OK;
+}
+
 static void set_meas_time_part_3(uint8_t result_code, void *user_data)
 {
     BH1750 self = (BH1750)user_data;
@@ -377,42 +413,6 @@ static void init_part_2(uint8_t result_code, void *user_data)
         /* This should never happen */
         execute_complete_cb(self, BH1750_RESULT_CODE_DRIVER_ERR);
     }
-}
-
-/**
- * @brief Convert raw measurement to illuminance in lx.
- *
- * @param[in] self BH1750 instance.
- * @param[in] raw_meas Raw measurement
- * @param[out] meas_lx Resulting measurement in lx is written here.
- *
- * @retval BH1750_RESULT_CODE_OK Successfully converted raw measurement to illuminance in lx.
- * @retval BH1750_RESULT_CODE_INVALID_USAGE self->meas_time is 0. Cannot convert, because we need to divide by
- * self->meas_time. self->meas_time should never be 0.
- * @retval BH1750_RESULT_CODE_DRIVER_ERR Something went wrong with the code of this driver.
- */
-static uint8_t convert_raw_meas_to_lx(BH1750 self, uint16_t raw_meas, uint32_t *const meas_lx)
-{
-    if (self->meas_time == 0) {
-        /* Division by 0 safety check */
-        return BH1750_RESULT_CODE_INVALID_USAGE;
-    }
-    switch (self->meas_mode) {
-    case BH1750_MEAS_MODE_H_RES:
-        *meas_lx = lroundf(raw_meas * (BH1750_CONVERSION_MAGIC * (69.0f / (self->meas_time))));
-        break;
-    case BH1750_MEAS_MODE_H_RES2:
-        *meas_lx = lroundf(raw_meas * ((BH1750_CONVERSION_MAGIC * (69.0f / (self->meas_time))) / 2.0f));
-        break;
-    case BH1750_MEAS_MODE_L_RES:
-        *meas_lx = lroundf(raw_meas * BH1750_CONVERSION_MAGIC);
-        break;
-    default:
-        /* Invalid measurement mode */
-        return BH1750_RESULT_CODE_DRIVER_ERR;
-    }
-
-    return BH1750_RESULT_CODE_OK;
 }
 
 static void read_continuous_measurement_part_2(uint8_t result_code, void *user_data)
