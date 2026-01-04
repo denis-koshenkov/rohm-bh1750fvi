@@ -197,6 +197,34 @@ uint8_t bh1750_reset(BH1750 self, BH1750CompleteCb cb, void *user_data);
  */
 uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH1750CompleteCb cb, void *user_data);
 
+/**
+ * @brief Read illuminance in lx when continuous measurement is ongoing.
+ *
+ * Reads current light intensity measurement when continuous measurement is ongoing. This function should only be called
+ * if continuous measurement is currently ongoing. Continuous measurement can be started by calling @ref
+ * bh1750_start_continuous_measurement.
+ *
+ * If this function is called two times, and the measurement did not get updated in between the two calls, @p meas_lx
+ * will have the same value for both calls. The rate at which the measurement gets updated depends on the measurement
+ * mode passed to @ref bh1750_start_continuous_measurement and the measurement time set via @ref
+ * bh1750_set_measurement_time.
+ *
+ * Once the read continuous measurement sequence is complete, or an error occurs, @p cb is executed. "result_code"
+ * paramter of @p cb indicates success or reason for failure of the read continuous measurement sequence:
+ * - @ref SHT3X_RESULT_CODE_OK Successfully performed the read continuous measurement sequence.
+ * - @ref SHT3X_RESULT_CODE_IO_ERR I2C transaction to read the measurement failed.
+ * - @ref SHT3X_RESULT_CODE_DRIVER_ERR Something went wrong in the code of this driver.
+ *
+ * @param[in] self BH1750 instance created by @ref bh1750_create.
+ * @param[out] meas_lx Resulting illuminance measurement in lx.
+ * @param[in] cb Callback to execute once the measurement is read out. @p meas_lx has a valid value when this callback
+ * is being executed, not before that.
+ * @param[in] user_data User data to pass to @p cb.
+ *
+ * @retval BH1750_RESULT_CODE_OK Successfully initiated reading continuous measurement.
+ * @retval BH1750_RESULT_CODE_INVALID_ARG @p self or @p meas_lx is NULL.
+ * @retval BH1750_RESULT_CODE_INVALID_USAGE Cannot read measurement, because continuous measurement is not ongoing.
+ */
 uint8_t bh1750_read_continuous_measurement(BH1750 self, uint32_t *const meas_lx, BH1750CompleteCb cb, void *user_data);
 
 /**

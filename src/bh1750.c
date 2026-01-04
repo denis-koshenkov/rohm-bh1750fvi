@@ -64,7 +64,7 @@ static bool is_valid_meas_mode(uint8_t meas_mode)
 /**
  * @brief Check whether measurement time is within allowed range.
  *
- * @param meas_time Measurement time.
+ * @param[in] meas_time Measurement time.
  *
  * @retval true Measurement time is valid.
  * @retval false Measurement time is invalid.
@@ -89,7 +89,7 @@ static uint16_t two_big_endian_bytes_to_uint16(const uint8_t *const bytes)
 /**
  * @brief Get three most significant bits of measurement time.
  *
- * @param meas_time Measurement time.
+ * @param[in] meas_time Measurement time.
  *
  * @return uint8_t Three most significant bits of @p meas_time. Value between 0 and 7 (both including).
  */
@@ -101,7 +101,7 @@ static uint8_t get_three_msb_of_meas_time(uint8_t meas_time)
 /**
  * @brief Get five least significant bits of measurement time.
  *
- * @param meas_time Measurement time.
+ * @param[in] meas_time Measurement time.
  *
  * @return uint8_t Five least significant bits of @p meas_time. Value between 0 and 31 (both including).
  */
@@ -113,8 +113,8 @@ static uint8_t get_five_lsb_of_meas_time(uint8_t meas_time)
 /**
  * @brief Interpret self->seq_cb as BH1750CompleteCb and execute it, if present.
  *
- * @param self BH1750 instance.
- * @param rc Result code to pass to the complete cb.
+ * @param[in] self BH1750 instance.
+ * @param[in] rc Result code to pass to the complete cb.
  */
 static void execute_complete_cb(BH1750 self, uint8_t rc)
 {
@@ -130,8 +130,8 @@ static void execute_complete_cb(BH1750 self, uint8_t rc)
  * Interprets seq_cb as BH1750CompleteCb and executes it. Passes BH1750_RESULT_CODE_OK to seq_cb if I2C transaction was
  * successful. Passes BH1750_RESULT_CODE_IO_ERR to seq_cb if I2C transaction failed.
  *
- * @param result_code I2C transaction result code. One of @ref BH1750_I2CResultCode.
- * @param user_data User data.
+ * @param[in] result_code I2C transaction result code. One of @ref BH1750_I2CResultCode.
+ * @param[in] user_data User data.
  */
 static void generic_i2c_complete_cb(uint8_t result_code, void *user_data)
 {
@@ -150,9 +150,9 @@ static void generic_i2c_complete_cb(uint8_t result_code, void *user_data)
  * Saves @p cb and @p user_data as sequence callback and user data, so that they can be executed once the sequence is
  * complete.
  *
- * @param self BH1750 instance.
- * @param cb Callback to execute once the sequence is complete.
- * @param user_data User data to pass to @p cb.
+ * @param[in] self BH1750 instance.
+ * @param[in] cb Callback to execute once the sequence is complete.
+ * @param[in] user_data User data to pass to @p cb.
  */
 static void start_sequence(BH1750 self, void *cb, void *user_data)
 {
@@ -163,9 +163,9 @@ static void start_sequence(BH1750 self, void *cb, void *user_data)
 /**
  * @brief Send power on command.
  *
- * @param self BH1750 instance.
- * @param cb Callback to execute once the command is sent.
- * @param user_data User data to pass to @p cb.
+ * @param[in] self BH1750 instance.
+ * @param[in] cb Callback to execute once the command is sent.
+ * @param[in] user_data User data to pass to @p cb.
  */
 static void send_power_on_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user_data)
 {
@@ -176,9 +176,9 @@ static void send_power_on_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user_d
 /**
  * @brief Send power down command.
  *
- * @param self BH1750 instance.
- * @param cb Callback to execute once the command is sent.
- * @param user_data User data to pass to @p cb.
+ * @param[in] self BH1750 instance.
+ * @param[in] cb Callback to execute once the command is sent.
+ * @param[in] user_data User data to pass to @p cb.
  */
 static void send_power_down_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user_data)
 {
@@ -189,9 +189,9 @@ static void send_power_down_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user
 /**
  * @brief Send reset command.
  *
- * @param self BH1750 instance.
- * @param cb Callback to execute once the command is sent.
- * @param user_data User data to pass to @p cb.
+ * @param[in] self BH1750 instance.
+ * @param[in] cb Callback to execute once the command is sent.
+ * @param[in] user_data User data to pass to @p cb.
  */
 static void send_reset_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user_data)
 {
@@ -202,9 +202,9 @@ static void send_reset_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user_data
 /**
  * @brief Send a I2C read command to read light intensity measurement.
  *
- * @param self BH1750 instance.
- * @param cb Callback to execute once the read command is sent.
- * @param user_data User data to pass to @p cb.
+ * @param[in] self BH1750 instance.
+ * @param[in] cb Callback to execute once the read command is sent.
+ * @param[in] user_data User data to pass to @p cb.
  */
 static void send_read_meas_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user_data)
 {
@@ -214,7 +214,7 @@ static void send_read_meas_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user_
 /**
  * @brief Get "start continuous measurement" command code.
  *
- * @param meas_mode Measurement mode.
+ * @param[in] meas_mode Measurement mode.
  *
  * @return uint8_t Corresponding command code.
  */
@@ -242,10 +242,10 @@ uint8_t get_start_cont_meas_cmd_code(uint8_t meas_mode)
 /**
  * @brief Send start continuous measurement command.
  *
- * @param self BH1750 instance.
- * @param meas_mode Measurement mode. One of @ref BH1750MeasMode.
- * @param cb Callback to execute once the command is sent.
- * @param user_data User data to pass to @p cb.
+ * @param[in] self BH1750 instance.
+ * @param[in] meas_mode Measurement mode. One of @ref BH1750MeasMode.
+ * @param[in] cb Callback to execute once the command is sent.
+ * @param[in] user_data User data to pass to @p cb.
  */
 static void send_start_continuous_meas_cmd(BH1750 self, uint8_t meas_mode, BH1750_I2CCompleteCb cb, void *user_data)
 {
@@ -256,11 +256,11 @@ static void send_start_continuous_meas_cmd(BH1750 self, uint8_t meas_mode, BH175
 /**
  * @brief Set the three MSbs of MTreg register.
  *
- * @param self BH1750 instance.
- * @param val Value to set the three most significant bits of MTreg to. Must be a value between 0 and 7 to fit into
+ * @param[in] self BH1750 instance.
+ * @param[in] val Value to set the three most significant bits of MTreg to. Must be a value between 0 and 7 to fit into
  * three bits.
- * @param cb Callback to execute once the command is sent.
- * @param user_data User data to pass to @p cb.
+ * @param[in] cb Callback to execute once the command is sent.
+ * @param[in] user_data User data to pass to @p cb.
  *
  * @retval BH1750_RESULT_CODE_OK Successfully sent the command to set high bits of MTreg.
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p val is > 7, so it cannot fit into three bits. @p cb will not be executed,
@@ -279,11 +279,11 @@ static uint8_t set_mtreg_high_bit(BH1750 self, uint8_t val, BH1750_I2CCompleteCb
 /**
  * @brief Set the five MSbs of MTreg register.
  *
- * @param self BH1750 instance.
- * @param val Value to set the five least significant bits of MTreg to. Must be a value between 0 and 31 to fit into
+ * @param[in] self BH1750 instance.
+ * @param[in] val Value to set the five least significant bits of MTreg to. Must be a value between 0 and 31 to fit into
  * five bits.
- * @param cb Callback to execute once the command is sent.
- * @param user_data User data to pass to @p cb.
+ * @param[in] cb Callback to execute once the command is sent.
+ * @param[in] user_data User data to pass to @p cb.
  *
  * @retval BH1750_RESULT_CODE_OK Successfully sent the command to set low bits of MTreg.
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p val is > 31, so it cannot fit into five bits. @p cb will not be executed,
@@ -383,8 +383,8 @@ static void set_meas_time_part_2(uint8_t result_code, void *user_data)
  * @pre @p self is validated to be not NULL.
  * @pre @p meas_time is validated to be a valid measurement time.
  *
- * @param self BH1750 instance.
- * @param meas_time Measurement time to set.
+ * @param[in] self BH1750 instance.
+ * @param[in] meas_time Measurement time to set.
  *
  * @retval BH1750_RESULT_CODE_OK Successfully initiated the first operation of set_meas_time sequence.
  * @retval BH1750_RESULT_CODE_DRIVER_ERR Something went wrong in the code of this driver.
