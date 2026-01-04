@@ -363,6 +363,12 @@ static void set_meas_time_part_2(uint8_t result_code, void *user_data)
         return;
     }
 
+    /* The first three bits of Mtreg have been set. Update the first three bits in our local ram copy of Mtreg. Even if
+     * the second write fails, then the local ram copy will still be valid - given that the second did not modify the
+     * register content. */
+    self->meas_time =
+        ((self->meas_time & ((uint8_t)0x1FU))) | (get_three_msb_of_meas_time(self->meas_time_to_set) << 5);
+
     uint8_t meas_time_five_lsb = get_five_lsb_of_meas_time(self->meas_time_to_set);
     uint8_t rc = set_mtreg_low_bit(self, meas_time_five_lsb, set_meas_time_part_3, (void *)self);
     if (rc != BH1750_RESULT_CODE_OK) {

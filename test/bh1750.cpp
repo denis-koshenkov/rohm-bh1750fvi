@@ -975,10 +975,10 @@ TEST(BH1750, ReadContMeasCalledAfterFailedStartContMeas)
     CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_USAGE, rc);
 }
 
-static void test_cont_meas_changes_with_meas_time(uint32_t meas_time, uint8_t *i2c_write_data_1,
-                                                  uint8_t *i2c_write_data_2, uint8_t cont_meas_mode,
-                                                  uint8_t *i2c_write_data_3, uint8_t *i2c_read_data,
-                                                  uint32_t expected_meas_lx)
+static void test_cont_meas_changes_with_meas_time(uint32_t meas_time, uint8_t *i2c_write_data_1, uint8_t i2c_write_rc_1,
+                                                  uint8_t *i2c_write_data_2, uint8_t i2c_write_rc_2,
+                                                  uint8_t cont_meas_mode, uint8_t *i2c_write_data_3,
+                                                  uint8_t *i2c_read_data, uint32_t expected_meas_lx)
 {
     uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
     CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
@@ -992,13 +992,15 @@ static void test_cont_meas_changes_with_meas_time(uint32_t meas_time, uint8_t *i
         .withParameter("i2c_addr", BH1750_TEST_DEFAULT_I2C_ADDR)
         .withParameter("user_data", i2c_write_user_data)
         .ignoreOtherParameters();
-    mock()
-        .expectOneCall("mock_bh1750_i2c_write")
-        .withMemoryBufferParameter("data", i2c_write_data_2, 1)
-        .withParameter("length", 1)
-        .withParameter("i2c_addr", BH1750_TEST_DEFAULT_I2C_ADDR)
-        .withParameter("user_data", i2c_write_user_data)
-        .ignoreOtherParameters();
+    if (i2c_write_rc_1 == BH1750_I2C_RESULT_CODE_OK) {
+        mock()
+            .expectOneCall("mock_bh1750_i2c_write")
+            .withMemoryBufferParameter("data", i2c_write_data_2, 1)
+            .withParameter("length", 1)
+            .withParameter("i2c_addr", BH1750_TEST_DEFAULT_I2C_ADDR)
+            .withParameter("user_data", i2c_write_user_data)
+            .ignoreOtherParameters();
+    }
     /* bh1750_start_continuous_measurement */
     mock()
         .expectOneCall("mock_bh1750_i2c_write")
@@ -1019,8 +1021,10 @@ static void test_cont_meas_changes_with_meas_time(uint32_t meas_time, uint8_t *i
     uint8_t rc_set_meas_time = bh1750_set_measurement_time(bh1750, meas_time, NULL, NULL);
     CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_set_meas_time);
     /* set_measurement_time writes two registers */
-    i2c_write_complete_cb(BH1750_I2C_RESULT_CODE_OK, i2c_write_complete_cb_user_data);
-    i2c_write_complete_cb(BH1750_I2C_RESULT_CODE_OK, i2c_write_complete_cb_user_data);
+    i2c_write_complete_cb(i2c_write_rc_1, i2c_write_complete_cb_user_data);
+    if (i2c_write_rc_1 == BH1750_I2C_RESULT_CODE_OK) {
+        i2c_write_complete_cb(i2c_write_rc_2, i2c_write_complete_cb_user_data);
+    }
 
     uint8_t rc_start_meas = bh1750_start_continuous_measurement(bh1750, cont_meas_mode, NULL, NULL);
     CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_start_meas);
@@ -1045,16 +1049,19 @@ TEST(BH1750, ReadContMeasHResMeasTime138)
     uint8_t meas_time = 138;
     /* Set three most significant bits of MTreg to 100 */
     uint8_t i2c_write_data_1 = 0x44;
+    uint8_t i2c_write_rc_1 = BH1750_I2C_RESULT_CODE_OK;
     /* Set five least significant bits of MTreg to 01010 */
     uint8_t i2c_write_data_2 = 0x6A;
+    uint8_t i2c_write_rc_2 = BH1750_I2C_RESULT_CODE_OK;
     uint8_t meas_mode = BH1750_MEAS_MODE_H_RES;
     /* Start continuous measurement in H-resolution mode cmd */
     uint8_t i2c_write_data_3 = 0x10;
     /* Example from the datasheet, p. 7 */
     uint8_t i2c_read_data[] = {0x83, 0x90};
     uint32_t expected_meas_lx = 14033;
-    test_cont_meas_changes_with_meas_time(meas_time, &i2c_write_data_1, &i2c_write_data_2, meas_mode, &i2c_write_data_3,
-                                          i2c_read_data, expected_meas_lx);
+    test_cont_meas_changes_with_meas_time(meas_time, &i2c_write_data_1, i2c_write_rc_1, &i2c_write_data_2,
+                                          i2c_write_rc_2, meas_mode, &i2c_write_data_3, i2c_read_data,
+                                          expected_meas_lx);
 }
 
 TEST(BH1750, ReadContMeasHRes2MeasTime138)
@@ -1063,16 +1070,19 @@ TEST(BH1750, ReadContMeasHRes2MeasTime138)
     uint8_t meas_time = 138;
     /* Set three most significant bits of MTreg to 100 */
     uint8_t i2c_write_data_1 = 0x44;
+    uint8_t i2c_write_rc_1 = BH1750_I2C_RESULT_CODE_OK;
     /* Set five least significant bits of MTreg to 01010 */
     uint8_t i2c_write_data_2 = 0x6A;
+    uint8_t i2c_write_rc_2 = BH1750_I2C_RESULT_CODE_OK;
     uint8_t meas_mode = BH1750_MEAS_MODE_H_RES2;
     /* Start continuous measurement in H-resolution mode 2 cmd */
     uint8_t i2c_write_data_3 = 0x11;
     /* Example from the datasheet, p. 7 */
     uint8_t i2c_read_data[] = {0x83, 0x90};
     uint32_t expected_meas_lx = 7017;
-    test_cont_meas_changes_with_meas_time(meas_time, &i2c_write_data_1, &i2c_write_data_2, meas_mode, &i2c_write_data_3,
-                                          i2c_read_data, expected_meas_lx);
+    test_cont_meas_changes_with_meas_time(meas_time, &i2c_write_data_1, i2c_write_rc_1, &i2c_write_data_2,
+                                          i2c_write_rc_2, meas_mode, &i2c_write_data_3, i2c_read_data,
+                                          expected_meas_lx);
 }
 
 TEST(BH1750, ReadContMeasLResMeasTime138)
@@ -1081,8 +1091,10 @@ TEST(BH1750, ReadContMeasLResMeasTime138)
     uint8_t meas_time = 138;
     /* Set three most significant bits of MTreg to 100 */
     uint8_t i2c_write_data_1 = 0x44;
+    uint8_t i2c_write_rc_1 = BH1750_I2C_RESULT_CODE_OK;
     /* Set five least significant bits of MTreg to 01010 */
     uint8_t i2c_write_data_2 = 0x6A;
+    uint8_t i2c_write_rc_2 = BH1750_I2C_RESULT_CODE_OK;
     uint8_t meas_mode = BH1750_MEAS_MODE_L_RES;
     /* Start continuous measurement in L-resolution mode cmd */
     uint8_t i2c_write_data_3 = 0x13;
@@ -1090,6 +1102,53 @@ TEST(BH1750, ReadContMeasLResMeasTime138)
     uint8_t i2c_read_data[] = {0x83, 0x90};
     /* Different meas time does not apply to low res mode. This is simply (0x8390 / 1.2f) - raw meas divided by 1.2. */
     uint32_t expected_meas_lx = 28067;
-    test_cont_meas_changes_with_meas_time(meas_time, &i2c_write_data_1, &i2c_write_data_2, meas_mode, &i2c_write_data_3,
-                                          i2c_read_data, expected_meas_lx);
+    test_cont_meas_changes_with_meas_time(meas_time, &i2c_write_data_1, i2c_write_rc_1, &i2c_write_data_2,
+                                          i2c_write_rc_2, meas_mode, &i2c_write_data_3, i2c_read_data,
+                                          expected_meas_lx);
+}
+
+TEST(BH1750, ReadContMeasSetMeasTimeWrite1Fail)
+{
+    /* bin: 10001010 */
+    uint8_t meas_time = 138;
+    /* Set three most significant bits of MTreg to 100 */
+    uint8_t i2c_write_data_1 = 0x44;
+    uint8_t i2c_write_rc_1 = BH1750_I2C_RESULT_CODE_ERR;
+    /* Set five least significant bits of MTreg to 01010 */
+    uint8_t i2c_write_data_2 = 0x6A;
+    uint8_t i2c_write_rc_2 = BH1750_I2C_RESULT_CODE_ERR;
+    uint8_t meas_mode = BH1750_MEAS_MODE_H_RES;
+    /* Start continuous measurement in H-resolution mode cmd */
+    uint8_t i2c_write_data_3 = 0x10;
+    /* Example from the datasheet, p. 7 */
+    uint8_t i2c_read_data[] = {0x83, 0x90};
+    /* Setting meas time failed, so this is (0x8390 / 1.2f) -> using default meas time (69) */
+    uint32_t expected_meas_lx = 28067;
+    test_cont_meas_changes_with_meas_time(meas_time, &i2c_write_data_1, i2c_write_rc_1, &i2c_write_data_2,
+                                          i2c_write_rc_2, meas_mode, &i2c_write_data_3, i2c_read_data,
+                                          expected_meas_lx);
+}
+
+TEST(BH1750, ReadContMeasSetMeasTimeWrite2Fail)
+{
+    /* bin: 10001010 */
+    uint8_t meas_time = 138;
+    /* Set three most significant bits of MTreg to 100 */
+    uint8_t i2c_write_data_1 = 0x44;
+    uint8_t i2c_write_rc_1 = BH1750_I2C_RESULT_CODE_OK;
+    /* Set five least significant bits of MTreg to 01010 */
+    uint8_t i2c_write_data_2 = 0x6A;
+    uint8_t i2c_write_rc_2 = BH1750_I2C_RESULT_CODE_ERR;
+    uint8_t meas_mode = BH1750_MEAS_MODE_H_RES;
+    /* Start continuous measurement in H-resolution mode cmd */
+    uint8_t i2c_write_data_3 = 0x10;
+    /* Example from the datasheet, p. 7 */
+    uint8_t i2c_read_data[] = {0x83, 0x90};
+    /* Meas time is 133 - 10000101 in binary. First three bits are from 138, because the first i2c write succeeded (it
+     * sets the first three bits). The last five bits are from 69, because the second write failed (it sets the last
+     * five bits). This value is: (0x8390 * (1 / 1.2) * (69 / 133)) */
+    uint32_t expected_meas_lx = 14561;
+    test_cont_meas_changes_with_meas_time(meas_time, &i2c_write_data_1, i2c_write_rc_1, &i2c_write_data_2,
+                                          i2c_write_rc_2, meas_mode, &i2c_write_data_3, i2c_read_data,
+                                          expected_meas_lx);
 }
