@@ -734,6 +734,10 @@ TEST(BH1750, InitSelfNull)
 typedef struct {
     /** I2C address to pass to bh1750_create init cfg. */
     uint8_t i2c_addr;
+    /** Measurement mode to pass to bh1750_start_continuous_measurement. */
+    uint8_t meas_mode;
+    /** Must point to 1 bytes that will be expected in the "data" parameter of i2c_write. */
+    uint8_t *i2c_write_data;
     /** Must point to 2 bytes that will be copied to the "data" parameter of i2c_read. */
     uint8_t *i2c_read_data;
     /** I2C return code to execute I2C read complete callback with. */
@@ -753,12 +757,10 @@ static void test_read_cont_meas(const TestReadContMeasCfg *const cfg)
     CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
     call_init();
 
-    /* Start continuous measurement in H-resolution mode cmd */
-    uint8_t i2c_write_data = 0x10;
     /* bh1750_start_continuous_measurement */
     mock()
         .expectOneCall("mock_bh1750_i2c_write")
-        .withMemoryBufferParameter("data", &i2c_write_data, 1)
+        .withMemoryBufferParameter("data", cfg->i2c_write_data, 1)
         .withParameter("length", 1)
         .withParameter("i2c_addr", cfg->i2c_addr)
         .withParameter("user_data", i2c_write_user_data)
@@ -773,7 +775,7 @@ static void test_read_cont_meas(const TestReadContMeasCfg *const cfg)
         .ignoreOtherParameters();
 
     /* Before reading continuous measurement, it needs to be started */
-    uint8_t rc_start_meas = bh1750_start_continuous_measurement(bh1750, BH1750_MEAS_MODE_H_RES, NULL, NULL);
+    uint8_t rc_start_meas = bh1750_start_continuous_measurement(bh1750, cfg->meas_mode, NULL, NULL);
     CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_start_meas);
     i2c_write_complete_cb(BH1750_I2C_RESULT_CODE_OK, i2c_write_complete_cb_user_data);
 
@@ -795,10 +797,14 @@ static void test_read_cont_meas(const TestReadContMeasCfg *const cfg)
 
 TEST(BH1750, ReadContMeasReadFail)
 {
+    /* Start continuous measurement in H-resolution mode cmd */
+    uint8_t i2c_write_data = 0x10;
     /* Read fails, data does not matter */
     uint8_t i2c_read_data[] = {0x0, 0x0};
     TestReadContMeasCfg cfg = {
         .i2c_addr = BH1750_TEST_DEFAULT_I2C_ADDR,
+        .meas_mode = BH1750_MEAS_MODE_H_RES,
+        .i2c_write_data = &i2c_write_data,
         .i2c_read_data = i2c_read_data,
         .i2c_read_rc = BH1750_I2C_RESULT_CODE_ERR,
         .expected_meas_lx = 0, /* Don't care */
@@ -808,12 +814,16 @@ TEST(BH1750, ReadContMeasReadFail)
     test_read_cont_meas(&cfg);
 }
 
-TEST(BH1750, ReadContMeasSuccess)
+TEST(BH1750, ReadContMeasHResSuccess)
 {
+    /* Start continuous measurement in H-resolution mode cmd */
+    uint8_t i2c_write_data = 0x10;
     /* Example from the datasheet, p. 7 */
     uint8_t i2c_read_data[] = {0x83, 0x90};
     TestReadContMeasCfg cfg = {
         .i2c_addr = BH1750_TEST_DEFAULT_I2C_ADDR,
+        .meas_mode = BH1750_MEAS_MODE_H_RES,
+        .i2c_write_data = &i2c_write_data,
         .i2c_read_data = i2c_read_data,
         .i2c_read_rc = BH1750_I2C_RESULT_CODE_OK,
         .expected_meas_lx = 28067,
@@ -823,11 +833,15 @@ TEST(BH1750, ReadContMeasSuccess)
     test_read_cont_meas(&cfg);
 }
 
-TEST(BH1750, ReadContMeasSuccess2)
+TEST(BH1750, ReadContMeasHResSuccess2)
 {
+    /* Start continuous measurement in H-resolution mode cmd */
+    uint8_t i2c_write_data = 0x10;
     uint8_t i2c_read_data[] = {0x75, 0x4F};
     TestReadContMeasCfg cfg = {
         .i2c_addr = BH1750_TEST_DEFAULT_I2C_ADDR,
+        .meas_mode = BH1750_MEAS_MODE_H_RES,
+        .i2c_write_data = &i2c_write_data,
         .i2c_read_data = i2c_read_data,
         .i2c_read_rc = BH1750_I2C_RESULT_CODE_OK,
         .expected_meas_lx = 25026,
@@ -837,12 +851,54 @@ TEST(BH1750, ReadContMeasSuccess2)
     test_read_cont_meas(&cfg);
 }
 
-TEST(BH1750, ReadContMeasCbNull)
+TEST(BH1750, ReadContMeasHRes2Success)
 {
+    /* Start continuous measurement in H-resolution 2 mode cmd */
+    uint8_t i2c_write_data = 0x11;
     /* Example from the datasheet, p. 7 */
     uint8_t i2c_read_data[] = {0x83, 0x90};
     TestReadContMeasCfg cfg = {
         .i2c_addr = BH1750_TEST_DEFAULT_I2C_ADDR,
+        .meas_mode = BH1750_MEAS_MODE_H_RES2,
+        .i2c_write_data = &i2c_write_data,
+        .i2c_read_data = i2c_read_data,
+        .i2c_read_rc = BH1750_I2C_RESULT_CODE_OK,
+        .expected_meas_lx = 14033,
+        .complete_cb = bh1750_complete_cb,
+        .expected_complete_cb_rc = BH1750_RESULT_CODE_OK,
+    };
+    test_read_cont_meas(&cfg);
+}
+
+TEST(BH1750, ReadContMeasLResSuccess)
+{
+    /* Start continuous measurement in L-resolution mode cmd */
+    uint8_t i2c_write_data = 0x13;
+    /* Example from the datasheet, p. 7 */
+    uint8_t i2c_read_data[] = {0x83, 0x90};
+    TestReadContMeasCfg cfg = {
+        .i2c_addr = BH1750_TEST_DEFAULT_I2C_ADDR,
+        .meas_mode = BH1750_MEAS_MODE_L_RES,
+        .i2c_write_data = &i2c_write_data,
+        .i2c_read_data = i2c_read_data,
+        .i2c_read_rc = BH1750_I2C_RESULT_CODE_OK,
+        .expected_meas_lx = 28067,
+        .complete_cb = bh1750_complete_cb,
+        .expected_complete_cb_rc = BH1750_RESULT_CODE_OK,
+    };
+    test_read_cont_meas(&cfg);
+}
+
+TEST(BH1750, ReadContMeasCbNull)
+{
+    /* Start continuous measurement in H-resolution mode cmd */
+    uint8_t i2c_write_data = 0x10;
+    /* Example from the datasheet, p. 7 */
+    uint8_t i2c_read_data[] = {0x83, 0x90};
+    TestReadContMeasCfg cfg = {
+        .i2c_addr = BH1750_TEST_DEFAULT_I2C_ADDR,
+        .meas_mode = BH1750_MEAS_MODE_H_RES,
+        .i2c_write_data = &i2c_write_data,
         .i2c_read_data = i2c_read_data,
         .i2c_read_rc = BH1750_I2C_RESULT_CODE_OK,
         .expected_meas_lx = 28067,
@@ -855,10 +911,14 @@ TEST(BH1750, ReadContMeasCbNull)
 
 TEST(BH1750, ReadContMeasAltI2cAddr)
 {
+    /* Start continuous measurement in H-resolution mode cmd */
+    uint8_t i2c_write_data = 0x10;
     /* Example from the datasheet, p. 7 */
     uint8_t i2c_read_data[] = {0x83, 0x90};
     TestReadContMeasCfg cfg = {
         .i2c_addr = BH1750_TEST_ALT_I2C_ADDR,
+        .meas_mode = BH1750_MEAS_MODE_H_RES,
+        .i2c_write_data = &i2c_write_data,
         .i2c_read_data = i2c_read_data,
         .i2c_read_rc = BH1750_I2C_RESULT_CODE_OK,
         .expected_meas_lx = 28067,
