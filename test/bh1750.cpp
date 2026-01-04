@@ -96,6 +96,52 @@ TEST_GROUP(BH1750)
 };
 // clang-format on
 
+/**
+ * @brief Records expected mock calls for bh1750_init and calls bh1750_init.
+ *
+ * This function cannot be in setup, because then we do not know yet the I2C address to expect for calls to
+ * mock_bh1750_i2c_write. Every test can set the I2C address to a different value before calling bh1750_create. This is
+ * why this function must be called in every test after bh1750_create.
+ */
+static void call_init()
+{
+    /* Power on command */
+    uint8_t init_i2c_write_data_1 = 0x01;
+    /* Set three most significant bits of MTreg to 010 */
+    uint8_t init_i2c_write_data_2 = 0x42;
+    /* Set five least significant bits of MTreg to 00101 */
+    uint8_t init_i2c_write_data_3 = 0x65;
+    /* bh1750_init */
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", &init_i2c_write_data_1, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", init_cfg.i2c_addr)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", &init_i2c_write_data_2, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", init_cfg.i2c_addr)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", &init_i2c_write_data_3, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", init_cfg.i2c_addr)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+
+    uint8_t rc_init = bh1750_init(bh1750, NULL, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_init);
+    /* init performs three writes - one for power on cmd, two for setting meas time in Mtreg */
+    i2c_write_complete_cb(BH1750_I2C_RESULT_CODE_OK, i2c_write_complete_cb_user_data);
+    i2c_write_complete_cb(BH1750_I2C_RESULT_CODE_OK, i2c_write_complete_cb_user_data);
+    i2c_write_complete_cb(BH1750_I2C_RESULT_CODE_OK, i2c_write_complete_cb_user_data);
+}
+
 typedef uint8_t (*SendCmdFunc)(BH1750 self, BH1750CompleteCb cb, void *user_data);
 
 /* Macros to pass to is_start_meas_cmd of test_send_cmd_func and test_invalid_arg */
@@ -705,6 +751,7 @@ static void test_read_cont_meas(const TestReadContMeasCfg *const cfg)
     init_cfg.i2c_addr = cfg->i2c_addr;
     uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
     CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+    call_init();
 
     /* Start continuous measurement in H-resolution mode cmd */
     uint8_t i2c_write_data = 0x10;
@@ -866,4 +913,86 @@ TEST(BH1750, ReadContMeasCalledAfterFailedStartContMeas)
     uint32_t meas_lx;
     uint8_t rc = bh1750_read_continuous_measurement(bh1750, &meas_lx, bh1750_complete_cb, NULL);
     CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_USAGE, rc);
+}
+
+static void test_cont_meas_changes_with_meas_time(uint32_t meas_time, uint8_t *i2c_write_data_1,
+                                                  uint8_t *i2c_write_data_2, uint8_t cont_meas_mode,
+                                                  uint8_t *i2c_write_data_3, uint8_t *i2c_read_data,
+                                                  uint32_t expected_meas_lx)
+{
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+    call_init();
+
+    /* bh1750_set_measurement_time */
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", i2c_write_data_1, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", BH1750_TEST_DEFAULT_I2C_ADDR)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", i2c_write_data_2, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", BH1750_TEST_DEFAULT_I2C_ADDR)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+    /* bh1750_start_continuous_measurement */
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", i2c_write_data_3, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", BH1750_TEST_DEFAULT_I2C_ADDR)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+    /* bh1750_read_continuous_measurement */
+    mock()
+        .expectOneCall("mock_bh1750_i2c_read")
+        .withOutputParameterReturning("data", i2c_read_data, 2)
+        .withParameter("length", 2)
+        .withParameter("i2c_addr", BH1750_TEST_DEFAULT_I2C_ADDR)
+        .withParameter("user_data", i2c_read_user_data)
+        .ignoreOtherParameters();
+
+    uint8_t rc_set_meas_time = bh1750_set_measurement_time(bh1750, meas_time, NULL, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_set_meas_time);
+    /* set_measurement_time writes two registers */
+    i2c_write_complete_cb(BH1750_I2C_RESULT_CODE_OK, i2c_write_complete_cb_user_data);
+    i2c_write_complete_cb(BH1750_I2C_RESULT_CODE_OK, i2c_write_complete_cb_user_data);
+
+    uint8_t rc_start_meas = bh1750_start_continuous_measurement(bh1750, cont_meas_mode, NULL, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_start_meas);
+    i2c_write_complete_cb(BH1750_I2C_RESULT_CODE_OK, i2c_write_complete_cb_user_data);
+
+    void *complete_cb_user_data_expected = (void *)0x16;
+    uint32_t meas_lx;
+    uint8_t rc =
+        bh1750_read_continuous_measurement(bh1750, &meas_lx, bh1750_complete_cb, complete_cb_user_data_expected);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc);
+    i2c_read_complete_cb(BH1750_I2C_RESULT_CODE_OK, i2c_read_complete_cb_user_data);
+
+    CHECK_EQUAL(1, complete_cb_call_count);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, complete_cb_result_code);
+    CHECK_EQUAL(complete_cb_user_data_expected, complete_cb_user_data);
+    CHECK_EQUAL(expected_meas_lx, meas_lx);
+}
+
+TEST(BH1750, ReadContMeasHResMeasTime138)
+{
+    /* bin: 10001010 */
+    uint8_t meas_time = 138;
+    /* Set three most significant bits of MTreg to 100 */
+    uint8_t i2c_write_data_1 = 0x44;
+    /* Set five least significant bits of MTreg to 01010 */
+    uint8_t i2c_write_data_2 = 0x6A;
+    uint8_t meas_mode = BH1750_MEAS_MODE_H_RES;
+    /* Start continuous measurement in H-resolution mode cmd */
+    uint8_t i2c_write_data_3 = 0x10;
+    /* Example from the datasheet, p. 7 */
+    uint8_t i2c_read_data[] = {0x83, 0x90};
+    uint32_t expected_meas_lx = 14033;
+    test_cont_meas_changes_with_meas_time(meas_time, &i2c_write_data_1, &i2c_write_data_2, meas_mode, &i2c_write_data_3,
+                                          i2c_read_data, expected_meas_lx);
 }

@@ -20,6 +20,7 @@
 #define BH1750_MIN_MEAS_TIME 31
 #define BH1750_MAX_MEAS_TIME 254
 
+#define BH1750_DEFAULT_MEAS_TIME 69
 /* Default measurement time is 69 (0x45), in bin: 01000101 */
 #define BH1750_DEFAULT_MEAS_TIME_THREE_MSB 0x2U // bin: 010
 #define BH1750_DEFAULT_MEAS_TIME_FIVE_LSB 0x5U  // bin: 00101
@@ -294,6 +295,22 @@ static uint8_t set_mtreg_low_bit(BH1750 self, uint8_t val, BH1750_I2CCompleteCb 
     return BH1750_I2C_RESULT_CODE_OK;
 }
 
+static void set_meas_time_part_3(uint8_t result_code, void *user_data)
+{
+    BH1750 self = (BH1750)user_data;
+    if (!self) {
+        return;
+    }
+
+    if (result_code != BH1750_I2C_RESULT_CODE_OK) {
+        execute_complete_cb(self, BH1750_RESULT_CODE_IO_ERR);
+        return;
+    }
+
+    self->meas_time = self->meas_time_to_set;
+    execute_complete_cb(self, BH1750_RESULT_CODE_OK);
+}
+
 static void set_meas_time_part_2(uint8_t result_code, void *user_data)
 {
     BH1750 self = (BH1750)user_data;
@@ -306,12 +323,28 @@ static void set_meas_time_part_2(uint8_t result_code, void *user_data)
         return;
     }
 
-    uint8_t meas_time_five_lsb = get_five_lsb_of_meas_time(self->meas_time);
-    uint8_t rc = set_mtreg_low_bit(self, meas_time_five_lsb, generic_i2c_complete_cb, (void *)self);
+    uint8_t meas_time_five_lsb = get_five_lsb_of_meas_time(self->meas_time_to_set);
+    uint8_t rc = set_mtreg_low_bit(self, meas_time_five_lsb, set_meas_time_part_3, (void *)self);
     if (rc != BH1750_RESULT_CODE_OK) {
         /* get_five_lsb_of_meas_time returned a value > 31. This should never happen. */
         execute_complete_cb(self, BH1750_RESULT_CODE_DRIVER_ERR);
     }
+}
+
+static void init_part_4(uint8_t result_code, void *user_data)
+{
+    BH1750 self = (BH1750)user_data;
+    if (!self) {
+        return;
+    }
+
+    if (result_code != BH1750_I2C_RESULT_CODE_OK) {
+        execute_complete_cb(self, BH1750_RESULT_CODE_IO_ERR);
+        return;
+    }
+
+    self->meas_time = self->meas_time_to_set;
+    execute_complete_cb(self, BH1750_RESULT_CODE_OK);
 }
 
 static void init_part_3(uint8_t result_code, void *user_data)
@@ -326,7 +359,7 @@ static void init_part_3(uint8_t result_code, void *user_data)
         return;
     }
 
-    uint8_t rc = set_mtreg_low_bit(self, BH1750_DEFAULT_MEAS_TIME_FIVE_LSB, generic_i2c_complete_cb, (void *)self);
+    uint8_t rc = set_mtreg_low_bit(self, BH1750_DEFAULT_MEAS_TIME_FIVE_LSB, init_part_4, (void *)self);
     if (rc != BH1750_RESULT_CODE_OK) {
         /* BH1750_DEFAULT_MEAS_TIME_FIVE_LSB > 31. This should never happen. */
         execute_complete_cb(self, BH1750_RESULT_CODE_DRIVER_ERR);
@@ -352,6 +385,16 @@ static void init_part_2(uint8_t result_code, void *user_data)
     }
 }
 
+static uint8_t convert_raw_meas_to_lx(BH1750 self, uint16_t raw_meas, uint32_t *const meas_lx)
+{
+    if (self->meas_time == 0) {
+        /* Division by 0 safety check */
+        return BH1750_RESULT_CODE_INVALID_USAGE;
+    }
+    *meas_lx = lroundf(raw_meas * ((1.0f / 1.2f) * (69.0f / (self->meas_time))));
+    return BH1750_RESULT_CODE_OK;
+}
+
 static void read_continuous_measurement_part_2(uint8_t result_code, void *user_data)
 {
     BH1750 self = (BH1750)user_data;
@@ -365,8 +408,13 @@ static void read_continuous_measurement_part_2(uint8_t result_code, void *user_d
     }
 
     uint16_t raw_meas = two_big_endian_bytes_to_uint16(self->read_buf);
-    uint32_t meas_lx = lroundf(((float)raw_meas) / 1.2f);
-    *(self->meas_p) = meas_lx;
+    uint8_t rc = convert_raw_meas_to_lx(self, raw_meas, self->meas_p);
+    if (rc != BH1750_RESULT_CODE_OK) {
+        /* self->meas_time is 0, this should never happen */
+        execute_complete_cb(self, BH1750_RESULT_CODE_DRIVER_ERR);
+        return;
+    }
+
     execute_complete_cb(self, BH1750_RESULT_CODE_OK);
 }
 
@@ -404,6 +452,9 @@ uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg)
     (*inst)->i2c_read_user_data = cfg->i2c_read_user_data;
     (*inst)->i2c_addr = cfg->i2c_addr;
     (*inst)->cont_meas_ongoing = false;
+    /* Will be populated during init where we set the default measurement time (69). Initialized here as a safety
+     * measure so that we do not access an uninitialized variable. */
+    (*inst)->meas_time = 0;
 
     return BH1750_RESULT_CODE_OK;
 }
@@ -415,6 +466,7 @@ uint8_t bh1750_init(BH1750 self, BH1750CompleteCb cb, void *user_data)
     }
 
     start_sequence(self, (void *)cb, user_data);
+    self->meas_time_to_set = BH1750_DEFAULT_MEAS_TIME;
     send_power_on_cmd(self, init_part_2, (void *)self);
     return BH1750_RESULT_CODE_OK;
 }
@@ -485,7 +537,7 @@ uint8_t bh1750_set_measurement_time(BH1750 self, uint8_t meas_time, BH1750Comple
     }
 
     start_sequence(self, (void *)cb, user_data);
-    self->meas_time = meas_time;
+    self->meas_time_to_set = meas_time;
 
     uint8_t meas_time_three_msb = get_three_msb_of_meas_time(meas_time);
     uint8_t rc = set_mtreg_high_bit(self, meas_time_three_msb, set_meas_time_part_2, (void *)self);

@@ -38,11 +38,16 @@ struct BH1750Struct {
     /** @brief I2C address of this BH1750 instance. */
     uint8_t i2c_addr;
     /** @brief Used only in the set_meas_time sequence. */
-    uint8_t meas_time;
+    uint8_t meas_time_to_set;
     /** @brief This buffer is passed to i2c_read function to save the received data. */
     uint8_t read_buf[2];
     /** @brief Whether continuous measurement is currently ongoing. */
     bool cont_meas_ongoing;
+    /** @brief Current measurement time set in Mtreg.
+     *
+     * Used for converting raw measurements to light intensity in lx.
+     */
+    uint8_t meas_time;
 };
 
 #ifdef __cplusplus
