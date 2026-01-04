@@ -331,39 +331,29 @@ static void set_meas_time_part_2(uint8_t result_code, void *user_data)
     }
 }
 
-static void init_part_4(uint8_t result_code, void *user_data)
+/**
+ * @brief Initiate first operation of set_meas_time sequence.
+ *
+ * @pre @p self is validated to be not NULL.
+ * @pre @p meas_time is validated to be a valid measurement time.
+ *
+ * @param self BH1750 instance.
+ * @param meas_time Measurement time to set.
+ *
+ * @retval BH1750_RESULT_CODE_OK Successfully initiated the first operation of set_meas_time sequence.
+ * @retval BH1750_RESULT_CODE_DRIVER_ERR Something went wrong in the code of this driver.
+ */
+static uint8_t set_meas_time_part_1(BH1750 self, uint8_t meas_time)
 {
-    BH1750 self = (BH1750)user_data;
-    if (!self) {
-        return;
-    }
+    self->meas_time_to_set = meas_time;
 
-    if (result_code != BH1750_I2C_RESULT_CODE_OK) {
-        execute_complete_cb(self, BH1750_RESULT_CODE_IO_ERR);
-        return;
-    }
-
-    self->meas_time = self->meas_time_to_set;
-    execute_complete_cb(self, BH1750_RESULT_CODE_OK);
-}
-
-static void init_part_3(uint8_t result_code, void *user_data)
-{
-    BH1750 self = (BH1750)user_data;
-    if (!self) {
-        return;
-    }
-
-    if (result_code != BH1750_I2C_RESULT_CODE_OK) {
-        execute_complete_cb(self, BH1750_RESULT_CODE_IO_ERR);
-        return;
-    }
-
-    uint8_t rc = set_mtreg_low_bit(self, BH1750_DEFAULT_MEAS_TIME_FIVE_LSB, init_part_4, (void *)self);
+    uint8_t meas_time_three_msb = get_three_msb_of_meas_time(meas_time);
+    uint8_t rc = set_mtreg_high_bit(self, meas_time_three_msb, set_meas_time_part_2, (void *)self);
     if (rc != BH1750_RESULT_CODE_OK) {
-        /* BH1750_DEFAULT_MEAS_TIME_FIVE_LSB > 31. This should never happen. */
-        execute_complete_cb(self, BH1750_RESULT_CODE_DRIVER_ERR);
+        /* If we are here, this means that get_three_msb_of_meas_time returned a value > 7. This should never happen. */
+        return BH1750_RESULT_CODE_DRIVER_ERR;
     }
+    return BH1750_RESULT_CODE_OK;
 }
 
 static void init_part_2(uint8_t result_code, void *user_data)
@@ -378,9 +368,9 @@ static void init_part_2(uint8_t result_code, void *user_data)
         return;
     }
 
-    uint8_t rc = set_mtreg_high_bit(self, BH1750_DEFAULT_MEAS_TIME_THREE_MSB, init_part_3, (void *)self);
+    uint8_t rc = set_meas_time_part_1(self, self->meas_time_to_set);
     if (rc != BH1750_RESULT_CODE_OK) {
-        /* BH1750_DEFAULT_MEAS_TIME_THREE_MSB > 7. This should never happen. */
+        /* This should never happen */
         execute_complete_cb(self, BH1750_RESULT_CODE_DRIVER_ERR);
     }
 }
@@ -537,13 +527,5 @@ uint8_t bh1750_set_measurement_time(BH1750 self, uint8_t meas_time, BH1750Comple
     }
 
     start_sequence(self, (void *)cb, user_data);
-    self->meas_time_to_set = meas_time;
-
-    uint8_t meas_time_three_msb = get_three_msb_of_meas_time(meas_time);
-    uint8_t rc = set_mtreg_high_bit(self, meas_time_three_msb, set_meas_time_part_2, (void *)self);
-    if (rc != BH1750_RESULT_CODE_OK) {
-        /* If we are here, this means that get_three_msb_of_meas_time returned a value > 7. This should never happen. */
-        return BH1750_RESULT_CODE_DRIVER_ERR;
-    }
-    return BH1750_RESULT_CODE_OK;
+    return set_meas_time_part_1(self, meas_time);
 }
