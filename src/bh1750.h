@@ -71,7 +71,7 @@ typedef struct {
     void *get_instance_memory_user_data;
     BH1750_I2CWrite i2c_write;
     void *i2c_write_user_data;
-    BH1750_I2CWrite i2c_read;
+    BH1750_I2CRead i2c_read;
     void *i2c_read_user_data;
     uint8_t i2c_addr;
 } BH1750InitConfig;

@@ -49,6 +49,22 @@ typedef void (*BH1750_I2CCompleteCb)(uint8_t result_code, void *user_data);
 typedef void (*BH1750_I2CWrite)(uint8_t *data, size_t length, uint8_t i2c_addr, void *user_data,
                                 BH1750_I2CCompleteCb cb, void *cb_user_data);
 
+/**
+ * @brief Perform a I2C read transaction to the BH1750 device.
+ *
+ * @param[out] data Data that is read from the device is written to this parameter in case of success. I2C read is
+ * successful if the result_code parameter of @p cb is equal to BH1750_I2C_RESULT_CODE_OK.
+ * @param[in] length Number of bytes in the @p data array.
+ * @param[in] i2c_addr I2C address of the BH1750 device.
+ * @param[in] user_data When this function is called, this parameter will be equal to i2c_read_user_data from the init
+ * config passed to @ref bh1750_create.
+ * @param[in] cb Callback to execute once the I2C transaction is complete. This callback must be executed from the
+ * same context that the BH1750 driver API functions get called from.
+ * @param[in] cb_user_data User data to pass to @p cb.
+ */
+typedef void (*BH1750_I2CRead)(uint8_t *data, size_t length, uint8_t i2c_addr, void *user_data, BH1750_I2CCompleteCb cb,
+                               void *cb_user_data);
+
 #ifdef __cplusplus
 }
 #endif

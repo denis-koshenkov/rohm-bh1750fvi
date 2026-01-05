@@ -23,7 +23,7 @@ struct BH1750Struct {
     /** @brief User data to pass to i2c_write. */
     void *i2c_write_user_data;
     /** @brief User-defined I2C read function that was passed to bh1750_create. */
-    BH1750_I2CWrite i2c_read;
+    BH1750_I2CRead i2c_read;
     /** @brief User data to pass to i2c_read. */
     void *i2c_read_user_data;
     /** @brief Callback to execute once current sequence is complete.
