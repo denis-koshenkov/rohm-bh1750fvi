@@ -41,7 +41,7 @@ typedef void (*BH1750_I2CCompleteCb)(uint8_t result_code, void *user_data);
  * @param[in] length Number of bytes in the @p data array.
  * @param[in] i2c_addr I2C address of the BH1750 device.
  * @param[in] user_data This parameter will be equal to i2c_write_user_data from the init config passed to @ref
- * sht3x_create.
+ * bh1750_create.
  * @param[in] cb Callback to execute once the I2C transaction is complete. This callback must be executed from the
  * same context that the BH1750 driver API functions get called from.
  * @param[in] cb_user_data User data to pass to @p cb.
