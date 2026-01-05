@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.0.3)
+cmake_minimum_required(VERSION 3.22.0)
 
 project(rohm-bh1750fvi)
 
