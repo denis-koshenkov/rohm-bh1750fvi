@@ -42,7 +42,7 @@
  */
 static bool is_valid_init_cfg(const BH1750InitConfig *const cfg)
 {
-    return (cfg->get_instance_memory && cfg->i2c_write && cfg->i2c_read);
+    return (cfg->get_instance_memory && cfg->i2c_write && cfg->i2c_read && cfg->start_timer);
 }
 
 /**
