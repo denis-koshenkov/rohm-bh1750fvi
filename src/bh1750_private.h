@@ -47,8 +47,13 @@ struct BH1750Struct {
     uint8_t read_buf[2];
     /** @brief Whether continuous measurement is currently ongoing. */
     bool cont_meas_ongoing;
-    /** @brief Measurement mode for ongoing continuous measurement. Only valid if cont_meas_ongoing is true. One of @ref
-     * BH1750MeasMode. */
+    /** @brief Current measurement mode. One of @ref BH1750MeasMode.
+     *
+     * Can be used in two ways:
+     * - Set at the beginning of start continuous measurement sequence, so that subsequent calls to
+     * bh1750_read_continuous_measurement can correctly convert raw measurement to lx.
+     * - Set at the beginning of one time measurement sequence, so that the last part of the sequence can correctly
+     * convert raw measurement to lx. */
     uint8_t meas_mode;
     /** @brief Current measurement time set in Mtreg.
      *
