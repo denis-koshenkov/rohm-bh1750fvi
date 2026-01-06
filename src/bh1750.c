@@ -17,6 +17,7 @@
 #define BH1750_START_CONTINUOUS_MEAS_L_RES_CMD 0x13
 #define BH1750_ONE_TIME_MEAS_H_RES_CMD 0x20
 #define BH1750_ONE_TIME_MEAS_H_RES2_CMD 0x21
+#define BH1750_ONE_TIME_MEAS_L_RES_CMD 0x23
 /* 01000000 in binary. The 5 MSbs are a fixed command to set 3 MSBs of MTreg. */
 #define BH1750_SET_MTREG_HIGH_BIT_CMD 0x40U
 /* 01100000 in binary. The 3 MSbs are a fixed command to set 5 LSBs of MTreg. */
@@ -160,6 +161,9 @@ static uint8_t get_one_time_meas_cmd_code(uint8_t meas_mode)
         break;
     case BH1750_MEAS_MODE_H_RES2:
         cmd_code = BH1750_ONE_TIME_MEAS_H_RES2_CMD;
+        break;
+    case BH1750_MEAS_MODE_L_RES:
+        cmd_code = BH1750_ONE_TIME_MEAS_L_RES_CMD;
         break;
     default:
         /* We should never end up here, because prior to calling this function, meas_mode must always be validated */
@@ -530,7 +534,8 @@ static void read_one_time_meas_part_2(uint8_t result_code, void *user_data)
         return;
     }
 
-    self->start_timer(180, self->start_timer_user_data, read_one_time_meas_part_3, (void *)self);
+    uint32_t timer_period = (self->meas_mode == BH1750_MEAS_MODE_L_RES) ? 24 : 180;
+    self->start_timer(timer_period, self->start_timer_user_data, read_one_time_meas_part_3, (void *)self);
 }
 
 uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg)

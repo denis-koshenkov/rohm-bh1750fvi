@@ -1292,7 +1292,7 @@ TEST(BH1750, ReadOneTimeMeasHResMode)
         .timer_period = 180, /* Max time it takes to make a measurement in H-resolution mode */
         .i2c_read_data = i2c_read_data,
         .i2c_read_rc = BH1750_I2C_RESULT_CODE_OK,
-        .expected_meas_lx = 28067, /* 0x8390 / 1.2 */
+        .expected_meas_lx = 28067, /* (0x8390 / 1.2) */
         .complete_cb = bh1750_complete_cb,
         .expected_complete_cb_rc = BH1750_RESULT_CODE_OK,
     };
@@ -1313,7 +1313,28 @@ TEST(BH1750, ReadOneTimeMeasHResMode2)
         .timer_period = 180, /* Max time it takes to make a measurement in H-resolution mode */
         .i2c_read_data = i2c_read_data,
         .i2c_read_rc = BH1750_I2C_RESULT_CODE_OK,
-        .expected_meas_lx = 14033, /* (0x8390 / 1.2) / 2 */
+        .expected_meas_lx = 14033, /* ((0x8390 / 1.2) / 2) */
+        .complete_cb = bh1750_complete_cb,
+        .expected_complete_cb_rc = BH1750_RESULT_CODE_OK,
+    };
+    test_read_one_time_meas(&cfg);
+}
+
+TEST(BH1750, ReadOneTimeMeasLResMode)
+{
+    /* One-time measurement in L-resolution mode cmd */
+    uint8_t i2c_write_data = 0x23;
+    /* Example from the datasheet, p. 7 */
+    uint8_t i2c_read_data[] = {0x83, 0x90};
+    TestReadOneTimeMeasCfg cfg = {
+        .i2c_addr = BH1750_TEST_DEFAULT_I2C_ADDR,
+        .meas_mode = BH1750_MEAS_MODE_L_RES,
+        .i2c_write_data = &i2c_write_data,
+        .i2c_write_rc = BH1750_I2C_RESULT_CODE_OK,
+        .timer_period = 24, /* Max time it takes to make a measurement in L-resolution mode */
+        .i2c_read_data = i2c_read_data,
+        .i2c_read_rc = BH1750_I2C_RESULT_CODE_OK,
+        .expected_meas_lx = 28067, /* (0x8390 / 1.2) */
         .complete_cb = bh1750_complete_cb,
         .expected_complete_cb_rc = BH1750_RESULT_CODE_OK,
     };
