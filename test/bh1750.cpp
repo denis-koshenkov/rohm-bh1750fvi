@@ -167,6 +167,8 @@ typedef enum {
     INVALID_ARG_TEST_TYPE_SET_MEAS_TIME,
     /** Test bh1750_read_continuous_measurement function. */
     INVALID_ARG_TEST_TYPE_READ_CONT_MEAS,
+    /** Test bh1750_read_one_time_measurement function. */
+    INVALID_ARG_TEST_TYPE_READ_ONE_TIME_MEAS,
 } InvalidArgTestType;
 
 /**
@@ -222,6 +224,14 @@ static void test_send_cmd_func(bool is_start_meas_cmd, uint8_t meas_mode, SendCm
     }
 }
 
+/** Context for testing invalid argument scenarios of bh1750_read_one_time_measurement. */
+typedef struct {
+    /** Passed to meas_mode parameter of bh1750_read_one_time_measurement. */
+    uint8_t meas_mode;
+    /** Passed to meas_lx parameter of bh1750_read_one_time_measurement. */
+    uint32_t *meas_lx_p;
+} ReadOneTimeMeasInvalidArgTestCtxt;
+
 /**
  * @brief Test a function when @ref BH1750_RESULT_CODE_INVALID_ARG is expected to be returned.
  *
@@ -238,6 +248,9 @@ static void test_send_cmd_func(bool is_start_meas_cmd, uint8_t meas_mode, SendCm
  * measurement time to pass to bh1750_set_measurement_time as the "meas_time" parameter.
  * - INVALID_ARG_TEST_TYPE_READ_CONT_MEAS: Should be a pointer to uint32_t. This pointer is passed to the meas_lx
  * parameter of bh1750_read_continuous_measurement. Can be NULL if needed for the test.
+ * - INVALID_ARG_TEST_TYPE_READ_ONE_TIME_MEAS: Should be a pointer to ReadOneTimeMeasInvalidArgTestCtxt. meas_mode and
+ * meas_lx_p are passed as arguments to the meas_mode and meas_lx parameters of bh1750_read_one_time_measurement
+ * respectively.
  */
 static void test_invalid_arg(BH1750 *inst_p, uint8_t test_type, void *test_type_context)
 {
@@ -285,7 +298,13 @@ static void test_invalid_arg(BH1750 *inst_p, uint8_t test_type, void *test_type_
 
         uint32_t *meas_lx = (uint32_t *)test_type_context;
         rc = bh1750_read_continuous_measurement(inst, meas_lx, bh1750_complete_cb, complete_cb_user_data_expected);
+        break;
     }
+    case INVALID_ARG_TEST_TYPE_READ_ONE_TIME_MEAS:
+        ReadOneTimeMeasInvalidArgTestCtxt *ctxt = (ReadOneTimeMeasInvalidArgTestCtxt *)test_type_context;
+        rc = bh1750_read_one_time_measurement(inst, ctxt->meas_mode, ctxt->meas_lx_p, bh1750_complete_cb,
+                                              complete_cb_user_data_expected);
+        break;
     }
 
     CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_ARG, rc);
@@ -1230,9 +1249,9 @@ static void test_read_one_time_meas(const TestReadOneTimeMeasCfg *const cfg)
         CHECK_EQUAL(1, complete_cb_call_count);
         CHECK_EQUAL(cfg->expected_complete_cb_rc, complete_cb_result_code);
         CHECK_EQUAL(complete_cb_user_data_expected, complete_cb_user_data);
-        if (cfg->expected_complete_cb_rc == BH1750_RESULT_CODE_OK) {
-            CHECK_EQUAL(cfg->expected_meas_lx, meas_lx);
-        }
+    }
+    if (cfg->expected_complete_cb_rc == BH1750_RESULT_CODE_OK) {
+        CHECK_EQUAL(cfg->expected_meas_lx, meas_lx);
     }
 }
 
@@ -1339,4 +1358,75 @@ TEST(BH1750, ReadOneTimeMeasLResMode)
         .expected_complete_cb_rc = BH1750_RESULT_CODE_OK,
     };
     test_read_one_time_meas(&cfg);
+}
+
+TEST(BH1750, ReadOneTimeMeasCbNull)
+{
+    /* One-time measurement in H-resolution mode cmd */
+    uint8_t i2c_write_data = 0x20;
+    /* Example from the datasheet, p. 7 */
+    uint8_t i2c_read_data[] = {0x83, 0x90};
+    TestReadOneTimeMeasCfg cfg = {
+        .i2c_addr = BH1750_TEST_DEFAULT_I2C_ADDR,
+        .meas_mode = BH1750_MEAS_MODE_H_RES,
+        .i2c_write_data = &i2c_write_data,
+        .i2c_write_rc = BH1750_I2C_RESULT_CODE_OK,
+        .timer_period = 180, /* Max time it takes to make a measurement in H-resolution mode */
+        .i2c_read_data = i2c_read_data,
+        .i2c_read_rc = BH1750_I2C_RESULT_CODE_OK,
+        .expected_meas_lx = 28067, /* (0x8390 / 1.2) */
+        .complete_cb = NULL,
+        .expected_complete_cb_rc = BH1750_RESULT_CODE_OK, /* So that meas_lx is checked against expected_meas_lx */
+    };
+    test_read_one_time_meas(&cfg);
+}
+
+TEST(BH1750, ReadOneTimeMeasAltI2cAddr)
+{
+    /* One-time measurement in H-resolution mode cmd */
+    uint8_t i2c_write_data = 0x20;
+    /* Example from the datasheet, p. 7 */
+    uint8_t i2c_read_data[] = {0x83, 0x90};
+    TestReadOneTimeMeasCfg cfg = {
+        .i2c_addr = BH1750_TEST_ALT_I2C_ADDR,
+        .meas_mode = BH1750_MEAS_MODE_H_RES,
+        .i2c_write_data = &i2c_write_data,
+        .i2c_write_rc = BH1750_I2C_RESULT_CODE_OK,
+        .timer_period = 180, /* Max time it takes to make a measurement in H-resolution mode */
+        .i2c_read_data = i2c_read_data,
+        .i2c_read_rc = BH1750_I2C_RESULT_CODE_OK,
+        .expected_meas_lx = 28067, /* (0x8390 / 1.2) */
+        .complete_cb = bh1750_complete_cb,
+        .expected_complete_cb_rc = BH1750_RESULT_CODE_OK,
+    };
+    test_read_one_time_meas(&cfg);
+}
+
+TEST(BH1750, ReadOneTimeMeasSelfNull)
+{
+    uint32_t meas_lx;
+    ReadOneTimeMeasInvalidArgTestCtxt ctxt = {
+        .meas_mode = BH1750_MEAS_MODE_H_RES,
+        .meas_lx_p = &meas_lx,
+    };
+    test_invalid_arg(NULL, INVALID_ARG_TEST_TYPE_READ_ONE_TIME_MEAS, &ctxt);
+}
+
+TEST(BH1750, ReadOneTimeMeasMeasLxNull)
+{
+    ReadOneTimeMeasInvalidArgTestCtxt ctxt = {
+        .meas_mode = BH1750_MEAS_MODE_H_RES,
+        .meas_lx_p = NULL,
+    };
+    test_invalid_arg(&bh1750, INVALID_ARG_TEST_TYPE_READ_ONE_TIME_MEAS, &ctxt);
+}
+
+TEST(BH1750, ReadOneTimeMeasInvalidMeasMode)
+{
+    uint32_t meas_lx;
+    ReadOneTimeMeasInvalidArgTestCtxt ctxt = {
+        .meas_mode = 0xF2, /* Invalid meas mode */
+        .meas_lx_p = &meas_lx,
+    };
+    test_invalid_arg(&bh1750, INVALID_ARG_TEST_TYPE_READ_ONE_TIME_MEAS, &ctxt);
 }

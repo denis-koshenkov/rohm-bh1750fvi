@@ -639,6 +639,10 @@ uint8_t bh1750_read_continuous_measurement(BH1750 self, uint32_t *const meas_lx,
 uint8_t bh1750_read_one_time_measurement(BH1750 self, uint8_t meas_mode, uint32_t *const meas_lx, BH1750CompleteCb cb,
                                          void *user_data)
 {
+    if (!self || !meas_lx || !is_valid_meas_mode(meas_mode)) {
+        return BH1750_RESULT_CODE_INVALID_ARG;
+    }
+
     start_sequence(self, (void *)cb, user_data);
     /* So that the last part of the sequence can write the result to meas_lx */
     self->meas_p = meas_lx;
