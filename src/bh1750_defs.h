@@ -35,6 +35,13 @@ typedef enum {
 typedef void (*BH1750_I2CCompleteCb)(uint8_t result_code, void *user_data);
 
 /**
+ * @brief Definition of callback type to execute when a BH1750 timer expires.
+ *
+ * @param user_data User data that was passed to the user_data parameter of @ref BH1750StartTimer.
+ */
+typedef void (*BH1750TimerExpiredCb)(void *user_data);
+
+/**
  * @brief Perform a I2C write transaction to the BH1750 device.
  *
  * @param[in] data Data to write to the device.
@@ -64,6 +71,24 @@ typedef void (*BH1750_I2CWrite)(uint8_t *data, size_t length, uint8_t i2c_addr, 
  */
 typedef void (*BH1750_I2CRead)(uint8_t *data, size_t length, uint8_t i2c_addr, void *user_data, BH1750_I2CCompleteCb cb,
                                void *cb_user_data);
+
+/**
+ * @brief Execute @p cb after @p duration_ms ms pass.
+ *
+ * The driver calls this function when it needs to have a delay between two actions. For example, a command was sent to
+ * the device, and the result of the command will be available only after some time. The driver will call this function
+ * after it sent the command, and @p cb will contain the implementation of reading the result of the command. The
+ * implementation of this callback must call @p cb after at least @p duration_ms pass.
+ *
+ * @p cb must be invoked from the same execution context as all other BH1750 driver functions.
+ *
+ * @param[in] duration_ms @p cb must be called after at least this number of ms pass.
+ * @param[in] user_data This parameter will be equal to start_timer_user_data from the init config passed to @ref
+ * bh1750_create.
+ * @param[in] cb Callback to execute after @p duration_ms ms pass.
+ * @param[in] cb_ser_data User data to pass to the @p cb callback.
+ */
+typedef void (*BH1750StartTimer)(uint32_t duration_ms, void *user_data, BH1750TimerExpiredCb cb, void *cb_user_data);
 
 #ifdef __cplusplus
 }

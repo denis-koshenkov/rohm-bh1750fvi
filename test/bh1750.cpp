@@ -27,6 +27,10 @@ static void *i2c_write_complete_cb_user_data;
 static BH1750_I2CCompleteCb i2c_read_complete_cb;
 static void *i2c_read_complete_cb_user_data;
 
+/* Populated by mock object whenever mock_bh1750_start_timer is called */
+static BH1750TimerExpiredCb timer_expired_cb;
+static void *timer_expired_cb_user_data;
+
 /* User data parameters to pass to bh1750_create in the init cfg */
 static void *get_instance_memory_user_data = (void *)0xDE;
 static void *i2c_write_user_data = (void *)0x78;
@@ -52,6 +56,8 @@ static void populate_default_init_cfg(BH1750InitConfig *const cfg)
     cfg->i2c_write_user_data = i2c_write_user_data;
     cfg->i2c_read = mock_bh1750_i2c_read;
     cfg->i2c_read_user_data = i2c_read_user_data;
+    cfg->start_timer = mock_bh1750_start_timer;
+    cfg->start_timer_user_data = start_timer_user_data;
     cfg->i2c_addr = BH1750_TEST_DEFAULT_I2C_ADDR;
 }
 
@@ -68,6 +74,8 @@ TEST_GROUP(BH1750)
         i2c_write_complete_cb_user_data = NULL;
         i2c_read_complete_cb = NULL;
         i2c_read_complete_cb_user_data = NULL;
+        timer_expired_cb = NULL;
+        timer_expired_cb_user_data = NULL;
 
         /* Pass pointers so that the mock object populates them with callbacks and user data, so that the test can simulate
         calling these callbacks. */
@@ -75,6 +83,8 @@ TEST_GROUP(BH1750)
         mock().setData("i2cWriteCompleteCbUserData", &i2c_write_complete_cb_user_data);
         mock().setData("i2cReadCompleteCb", (void *)&i2c_read_complete_cb);
         mock().setData("i2cReadCompleteCbUserData", &i2c_read_complete_cb_user_data);
+        mock().setData("timerExpiredCb", (void *)&timer_expired_cb);
+        mock().setData("timerExpiredCbUserData", &timer_expired_cb_user_data);
 
         /* Reset variables populated from inside bh1750_complete_cb */
         complete_cb_call_count = 0;
@@ -1151,4 +1161,119 @@ TEST(BH1750, ReadContMeasSetMeasTimeWrite2Fail)
     test_cont_meas_changes_with_meas_time(meas_time, &i2c_write_data_1, i2c_write_rc_1, &i2c_write_data_2,
                                           i2c_write_rc_2, meas_mode, &i2c_write_data_3, i2c_read_data,
                                           expected_meas_lx);
+}
+
+typedef struct {
+    /** I2C address to pass to bh1750_create init cfg. */
+    uint8_t i2c_addr;
+    /** Measurement mode to pass to bh1750_read_one_time_measurement. */
+    uint8_t meas_mode;
+    /** Must point to 1 bytes that will be expected in the "data" parameter of i2c_write. */
+    uint8_t *i2c_write_data;
+    /** Result code to call the I2C write complete callback with. */
+    uint8_t i2c_write_rc;
+    /** Timer period with which start_timer is expected to be called. */
+    uint32_t timer_period;
+    /** Must point to 2 bytes that will be copied to the "data" parameter of i2c_read. */
+    uint8_t *i2c_read_data;
+    /** I2C return code to execute I2C read complete callback with. */
+    uint8_t i2c_read_rc;
+    /** Expected measurement in lx. It is only checked if expected_complete_cb_rc is BH1750_RESULT_CODE_OK. */
+    uint32_t expected_meas_lx;
+    /** Complete callback to execute once bh1750_read_one_time_measurement is complete. */
+    BH1750CompleteCb complete_cb;
+    /** Expected complete callback rc. Only checked if complete_cb is not NULL. */
+    uint8_t expected_complete_cb_rc;
+} TestReadOneTimeMeasCfg;
+
+static void test_read_one_time_meas(const TestReadOneTimeMeasCfg *const cfg)
+{
+    init_cfg.i2c_addr = cfg->i2c_addr;
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+    call_init();
+
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", cfg->i2c_write_data, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", cfg->i2c_addr)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+    if (cfg->i2c_write_rc == BH1750_I2C_RESULT_CODE_OK) {
+        mock()
+            .expectOneCall("mock_bh1750_start_timer")
+            .withParameter("duration_ms", cfg->timer_period)
+            .withParameter("user_data", start_timer_user_data)
+            .ignoreOtherParameters();
+        mock()
+            .expectOneCall("mock_bh1750_i2c_read")
+            .withOutputParameterReturning("data", cfg->i2c_read_data, 2)
+            .withParameter("length", 2)
+            .withParameter("i2c_addr", cfg->i2c_addr)
+            .withParameter("user_data", i2c_read_user_data)
+            .ignoreOtherParameters();
+    }
+
+    uint32_t meas_lx;
+    void *complete_cb_user_data_expected = (void *)0x17;
+    uint8_t rc = bh1750_read_one_time_measurement(bh1750, cfg->meas_mode, &meas_lx, cfg->complete_cb,
+                                                  complete_cb_user_data_expected);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc);
+    i2c_write_complete_cb(cfg->i2c_write_rc, i2c_write_complete_cb_user_data);
+    if (cfg->i2c_write_rc == BH1750_I2C_RESULT_CODE_OK) {
+        timer_expired_cb(timer_expired_cb_user_data);
+        i2c_read_complete_cb(cfg->i2c_read_rc, i2c_read_complete_cb_user_data);
+    }
+
+    if (cfg->complete_cb) {
+        CHECK_EQUAL(1, complete_cb_call_count);
+        CHECK_EQUAL(cfg->expected_complete_cb_rc, complete_cb_result_code);
+        CHECK_EQUAL(complete_cb_user_data_expected, complete_cb_user_data);
+        if (cfg->expected_complete_cb_rc == BH1750_RESULT_CODE_OK) {
+            CHECK_EQUAL(cfg->expected_meas_lx, meas_lx);
+        }
+    }
+}
+
+TEST(BH1750, ReadOneTimeMeasWriteFail)
+{
+    /* One-time measurement in H-resolution mode cmd */
+    uint8_t i2c_write_data = 0x20;
+    /* Garbage data, not used in this test */
+    uint8_t i2c_read_data[] = {0xAB, 0xCD};
+    TestReadOneTimeMeasCfg cfg = {
+        .i2c_addr = BH1750_TEST_DEFAULT_I2C_ADDR,
+        .meas_mode = BH1750_MEAS_MODE_H_RES,
+        .i2c_write_data = &i2c_write_data,
+        .i2c_write_rc = BH1750_I2C_RESULT_CODE_ERR,
+        .timer_period = 0,                         /* Don't care */
+        .i2c_read_data = i2c_read_data,            /* Don't care */
+        .i2c_read_rc = BH1750_I2C_RESULT_CODE_ERR, /* Don't care */
+        .expected_meas_lx = 0,                     /* Don't care */
+        .complete_cb = bh1750_complete_cb,
+        .expected_complete_cb_rc = BH1750_RESULT_CODE_IO_ERR,
+    };
+    test_read_one_time_meas(&cfg);
+}
+
+TEST(BH1750, ReadOneTimeMeasReadFail)
+{
+    /* One-time measurement in H-resolution mode cmd */
+    uint8_t i2c_write_data = 0x20;
+    /* Garbage data, not used in this test because read fails */
+    uint8_t i2c_read_data[] = {0xAB, 0xCD};
+    TestReadOneTimeMeasCfg cfg = {
+        .i2c_addr = BH1750_TEST_DEFAULT_I2C_ADDR,
+        .meas_mode = BH1750_MEAS_MODE_H_RES,
+        .i2c_write_data = &i2c_write_data,
+        .i2c_write_rc = BH1750_I2C_RESULT_CODE_OK,
+        .timer_period = 180,            /* Max time it takes to make a measurement in H-resolution mode */
+        .i2c_read_data = i2c_read_data, /* Don't care */
+        .i2c_read_rc = BH1750_I2C_RESULT_CODE_ERR,
+        .expected_meas_lx = 0, /* Don't care */
+        .complete_cb = bh1750_complete_cb,
+        .expected_complete_cb_rc = BH1750_RESULT_CODE_IO_ERR,
+    };
+    test_read_one_time_meas(&cfg);
 }

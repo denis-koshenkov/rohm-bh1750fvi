@@ -15,6 +15,7 @@
 #define BH1750_START_CONTINUOUS_MEAS_H_RES_CMD 0x10
 #define BH1750_START_CONTINUOUS_MEAS_H_RES2_CMD 0x11
 #define BH1750_START_CONTINUOUS_MEAS_L_RES_CMD 0x13
+#define BH1750_ONE_TIME_MEAS_H_RES_CMD 0x20
 /* 01000000 in binary. The 5 MSbs are a fixed command to set 3 MSBs of MTreg. */
 #define BH1750_SET_MTREG_HIGH_BIT_CMD 0x40U
 /* 01100000 in binary. The 3 MSbs are a fixed command to set 5 LSBs of MTreg. */
@@ -202,6 +203,8 @@ static void send_reset_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user_data
 /**
  * @brief Send a I2C read command to read light intensity measurement.
  *
+ * The resulting 2 bytes of raw measurement are read into self->read_buf.
+ *
  * @param[in] self BH1750 instance.
  * @param[in] cb Callback to execute once the read command is sent.
  * @param[in] user_data User data to pass to @p cb.
@@ -214,7 +217,9 @@ static void send_read_meas_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user_
 /**
  * @brief Get "start continuous measurement" command code.
  *
- * @param[in] meas_mode Measurement mode.
+ * @pre @p meas_mode has been validated to have one of the valid values from @ref BH1750MeasMode.
+ *
+ * @param[in] meas_mode Measurement mode. One of @ref BH1750MeasMode.
  *
  * @return uint8_t Corresponding command code.
  */
@@ -250,6 +255,20 @@ uint8_t get_start_cont_meas_cmd_code(uint8_t meas_mode)
 static void send_start_continuous_meas_cmd(BH1750 self, uint8_t meas_mode, BH1750_I2CCompleteCb cb, void *user_data)
 {
     uint8_t cmd = get_start_cont_meas_cmd_code(meas_mode);
+    self->i2c_write(&cmd, 1, self->i2c_addr, self->i2c_write_user_data, cb, user_data);
+}
+
+/**
+ * @brief Send one time measurement command.
+ *
+ * @param[in] self BH1750 instance.
+ * @param[in] meas_mode Measurement mode. One of @ref BH1750MeasMode.
+ * @param[in] cb Callback to execute once the command is sent.
+ * @param[in] user_data User data to pass to @p cb.
+ */
+static void send_one_time_meas_cmd(BH1750 self, uint8_t meas_mode, BH1750_I2CCompleteCb cb, void *user_data)
+{
+    uint8_t cmd = BH1750_ONE_TIME_MEAS_H_RES_CMD;
     self->i2c_write(&cmd, 1, self->i2c_addr, self->i2c_write_user_data, cb, user_data);
 }
 
@@ -461,6 +480,41 @@ static void start_continuous_measurement_part_2(uint8_t result_code, void *user_
     execute_complete_cb(self, rc);
 }
 
+static void read_one_time_meas_part_4(uint8_t result_code, void *user_data)
+{
+    BH1750 self = (BH1750)user_data;
+    if (!self) {
+        return;
+    }
+
+    execute_complete_cb(self, BH1750_RESULT_CODE_IO_ERR);
+}
+
+static void read_one_time_meas_part_3(void *user_data)
+{
+    BH1750 self = (BH1750)user_data;
+    if (!self) {
+        return;
+    }
+
+    send_read_meas_cmd(self, read_one_time_meas_part_4, (void *)self);
+}
+
+static void read_one_time_meas_part_2(uint8_t result_code, void *user_data)
+{
+    BH1750 self = (BH1750)user_data;
+    if (!self) {
+        return;
+    }
+
+    if (result_code != BH1750_I2C_RESULT_CODE_OK) {
+        execute_complete_cb(self, BH1750_RESULT_CODE_IO_ERR);
+        return;
+    }
+
+    self->start_timer(180, self->start_timer_user_data, read_one_time_meas_part_3, (void *)self);
+}
+
 uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg)
 {
     if (!inst || !is_valid_init_cfg(cfg)) {
@@ -476,6 +530,8 @@ uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg)
     (*inst)->i2c_write_user_data = cfg->i2c_write_user_data;
     (*inst)->i2c_read = cfg->i2c_read;
     (*inst)->i2c_read_user_data = cfg->i2c_read_user_data;
+    (*inst)->start_timer = cfg->start_timer;
+    (*inst)->start_timer_user_data = cfg->start_timer_user_data;
     (*inst)->i2c_addr = cfg->i2c_addr;
     (*inst)->cont_meas_ongoing = false;
     /* Will be populated during init where we set the default measurement time (69). Initialized here as a safety
@@ -554,6 +610,14 @@ uint8_t bh1750_read_continuous_measurement(BH1750 self, uint32_t *const meas_lx,
     start_sequence(self, (void *)cb, user_data);
     self->meas_p = meas_lx;
     send_read_meas_cmd(self, read_continuous_measurement_part_2, (void *)self);
+    return BH1750_RESULT_CODE_OK;
+}
+
+uint8_t bh1750_read_one_time_measurement(BH1750 self, uint8_t meas_mode, uint32_t *const meas_lx, BH1750CompleteCb cb,
+                                         void *user_data)
+{
+    start_sequence(self, (void *)cb, user_data);
+    send_one_time_meas_cmd(self, meas_mode, read_one_time_meas_part_2, (void *)self);
     return BH1750_RESULT_CODE_OK;
 }
 

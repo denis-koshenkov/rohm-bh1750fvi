@@ -26,6 +26,10 @@ struct BH1750Struct {
     BH1750_I2CRead i2c_read;
     /** @brief User data to pass to i2c_read. */
     void *i2c_read_user_data;
+    /** @brief User-defined start timer function that was passed to bh1750_create. */
+    BH1750StartTimer start_timer;
+    /** @brief User data to pass to start_timer. */
+    void *start_timer_user_data;
     /** @brief Callback to execute once current sequence is complete.
      *
      * void * because different sequences types might require different callback types to be executed.
