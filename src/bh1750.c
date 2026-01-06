@@ -113,6 +113,63 @@ static uint8_t get_five_lsb_of_meas_time(uint8_t meas_time)
 }
 
 /**
+ * @brief Get "start continuous measurement" command code.
+ *
+ * @pre @p meas_mode has been validated to have one of the valid values from @ref BH1750MeasMode.
+ *
+ * @param[in] meas_mode Measurement mode. One of @ref BH1750MeasMode.
+ *
+ * @return uint8_t Corresponding command code.
+ */
+static uint8_t get_start_cont_meas_cmd_code(uint8_t meas_mode)
+{
+    uint8_t cmd_code;
+    switch (meas_mode) {
+    case BH1750_MEAS_MODE_H_RES:
+        cmd_code = BH1750_START_CONTINUOUS_MEAS_H_RES_CMD;
+        break;
+    case BH1750_MEAS_MODE_H_RES2:
+        cmd_code = BH1750_START_CONTINUOUS_MEAS_H_RES2_CMD;
+        break;
+    case BH1750_MEAS_MODE_L_RES:
+        cmd_code = BH1750_START_CONTINUOUS_MEAS_L_RES_CMD;
+        break;
+    default:
+        /* We should never end up here, because prior to calling this function, meas_mode must always be validated */
+        cmd_code = BH1750_START_CONTINUOUS_MEAS_H_RES_CMD;
+        break;
+    }
+    return cmd_code;
+}
+
+/**
+ * @brief Get "one time measurement" command code.
+ *
+ * @pre @p meas_mode has been validated to have one of the valid values from @ref BH1750MeasMode.
+ *
+ * @param[in] meas_mode Measurement mode. One of @ref BH1750MeasMode.
+ *
+ * @return uint8_t Corresponding command code.
+ */
+static uint8_t get_one_time_meas_cmd_code(uint8_t meas_mode)
+{
+    uint8_t cmd_code;
+    switch (meas_mode) {
+    case BH1750_MEAS_MODE_H_RES:
+        cmd_code = BH1750_ONE_TIME_MEAS_H_RES_CMD;
+        break;
+    case BH1750_MEAS_MODE_H_RES2:
+        cmd_code = BH1750_ONE_TIME_MEAS_H_RES2_CMD;
+        break;
+    default:
+        /* We should never end up here, because prior to calling this function, meas_mode must always be validated */
+        cmd_code = BH1750_ONE_TIME_MEAS_H_RES_CMD;
+        break;
+    }
+    return cmd_code;
+}
+
+/**
  * @brief Interpret self->seq_cb as BH1750CompleteCb and execute it, if present.
  *
  * @param[in] self BH1750 instance.
@@ -216,36 +273,6 @@ static void send_read_meas_cmd(BH1750 self, BH1750_I2CCompleteCb cb, void *user_
 }
 
 /**
- * @brief Get "start continuous measurement" command code.
- *
- * @pre @p meas_mode has been validated to have one of the valid values from @ref BH1750MeasMode.
- *
- * @param[in] meas_mode Measurement mode. One of @ref BH1750MeasMode.
- *
- * @return uint8_t Corresponding command code.
- */
-uint8_t get_start_cont_meas_cmd_code(uint8_t meas_mode)
-{
-    uint8_t cmd_code;
-    switch (meas_mode) {
-    case BH1750_MEAS_MODE_H_RES:
-        cmd_code = BH1750_START_CONTINUOUS_MEAS_H_RES_CMD;
-        break;
-    case BH1750_MEAS_MODE_H_RES2:
-        cmd_code = BH1750_START_CONTINUOUS_MEAS_H_RES2_CMD;
-        break;
-    case BH1750_MEAS_MODE_L_RES:
-        cmd_code = BH1750_START_CONTINUOUS_MEAS_L_RES_CMD;
-        break;
-    default:
-        /* We should never end up here, because prior to calling this function, meas_mode must always be validated */
-        cmd_code = BH1750_START_CONTINUOUS_MEAS_H_RES_CMD;
-        break;
-    }
-    return cmd_code;
-}
-
-/**
  * @brief Send start continuous measurement command.
  *
  * @param[in] self BH1750 instance.
@@ -257,33 +284,6 @@ static void send_start_continuous_meas_cmd(BH1750 self, uint8_t meas_mode, BH175
 {
     uint8_t cmd = get_start_cont_meas_cmd_code(meas_mode);
     self->i2c_write(&cmd, 1, self->i2c_addr, self->i2c_write_user_data, cb, user_data);
-}
-
-/**
- * @brief Get "one time measurement" command code.
- *
- * @pre @p meas_mode has been validated to have one of the valid values from @ref BH1750MeasMode.
- *
- * @param[in] meas_mode Measurement mode. One of @ref BH1750MeasMode.
- *
- * @return uint8_t Corresponding command code.
- */
-uint8_t get_one_time_meas_cmd_code(uint8_t meas_mode)
-{
-    uint8_t cmd_code;
-    switch (meas_mode) {
-    case BH1750_MEAS_MODE_H_RES:
-        cmd_code = BH1750_ONE_TIME_MEAS_H_RES_CMD;
-        break;
-    case BH1750_MEAS_MODE_H_RES2:
-        cmd_code = BH1750_ONE_TIME_MEAS_H_RES2_CMD;
-        break;
-    default:
-        /* We should never end up here, because prior to calling this function, meas_mode must always be validated */
-        cmd_code = BH1750_ONE_TIME_MEAS_H_RES_CMD;
-        break;
-    }
-    return cmd_code;
 }
 
 /**
