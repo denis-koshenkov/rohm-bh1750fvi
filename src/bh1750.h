@@ -100,7 +100,7 @@ uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg);
  * 2. Sets measurement time to 69 (default). Equivalent to calling @ref bh1750_set_measurement_time with "meas_time"
  * parameter equal to 69.
  *
- * Once the init sequence is complete, or an error occurs, @p cb is executed. "result_code" paramter of @p cb indicates
+ * Once the init sequence is complete, or an error occurs, @p cb is executed. "result_code" parameter of @p cb indicates
  * success or reason for failure of the init sequence:
  * - @ref SHT3X_RESULT_CODE_OK Successfully performed the init sequence.
  * - @ref SHT3X_RESULT_CODE_IO_ERR I2C One of the I2C transactions in the init sequence failed.
@@ -120,7 +120,7 @@ uint8_t bh1750_init(BH1750 self, BH1750CompleteCb cb, void *user_data);
  *
  * Sends the "power on" command to BH1750.
  *
- * Once the power on sequence is complete, or an error occurs, @p cb is executed. "result_code" paramter of @p cb
+ * Once the power on sequence is complete, or an error occurs, @p cb is executed. "result_code" parameter of @p cb
  * indicates success or reason for failure of the power on sequence:
  * - @ref SHT3X_RESULT_CODE_OK Successfully performed the power on sequence.
  * - @ref SHT3X_RESULT_CODE_IO_ERR I2C transaction to send the power on command failed.
@@ -139,7 +139,7 @@ uint8_t bh1750_power_on(BH1750 self, BH1750CompleteCb cb, void *user_data);
  *
  * Sends the "power down" command to BH1750.
  *
- * Once the power down sequence is complete, or an error occurs, @p cb is executed. "result_code" paramter of @p cb
+ * Once the power down sequence is complete, or an error occurs, @p cb is executed. "result_code" parameter of @p cb
  * indicates success or reason for failure of the power down sequence:
  * - @ref SHT3X_RESULT_CODE_OK Successfully performed the power down sequence.
  * - @ref SHT3X_RESULT_CODE_IO_ERR I2C transaction to send the power down command failed.
@@ -161,7 +161,7 @@ uint8_t bh1750_power_down(BH1750 self, BH1750CompleteCb cb, void *user_data);
  *
  * Sends the "reset" command to BH1750.
  *
- * Once the reset sequence is complete, or an error occurs, @p cb is executed. "result_code" paramter of @p cb
+ * Once the reset sequence is complete, or an error occurs, @p cb is executed. "result_code" parameter of @p cb
  * indicates success or reason for failure of the reset sequence:
  * - @ref SHT3X_RESULT_CODE_OK Successfully performed the reset sequence.
  * - @ref SHT3X_RESULT_CODE_IO_ERR I2C transaction to send the reset command failed.
@@ -185,7 +185,7 @@ uint8_t bh1750_reset(BH1750 self, BH1750CompleteCb cb, void *user_data);
  * measurement.
  *
  * Once the start continuous measurement sequence is complete, or an error occurs, @p cb is executed. "result_code"
- * paramter of @p cb indicates success or reason for failure of the start continuous measurement sequence:
+ * parameter of @p cb indicates success or reason for failure of the start continuous measurement sequence:
  * - @ref SHT3X_RESULT_CODE_OK Successfully performed the start continuous measurement sequence.
  * - @ref SHT3X_RESULT_CODE_IO_ERR I2C transaction to send the start continuous measurement command failed.
  *
@@ -212,7 +212,7 @@ uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH17
  * bh1750_set_measurement_time.
  *
  * Once the read continuous measurement sequence is complete, or an error occurs, @p cb is executed. "result_code"
- * paramter of @p cb indicates success or reason for failure of the read continuous measurement sequence:
+ * parameter of @p cb indicates success or reason for failure of the read continuous measurement sequence:
  * - @ref SHT3X_RESULT_CODE_OK Successfully performed the read continuous measurement sequence.
  * - @ref SHT3X_RESULT_CODE_IO_ERR I2C transaction to read the measurement failed.
  * - @ref SHT3X_RESULT_CODE_DRIVER_ERR Something went wrong in the code of this driver.
@@ -229,6 +229,32 @@ uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH17
  */
 uint8_t bh1750_read_continuous_measurement(BH1750 self, uint32_t *const meas_lx, BH1750CompleteCb cb, void *user_data);
 
+/**
+ * @brief Read one-time illuminance measurement in lx.
+ *
+ * Steps:
+ * 1. Send "one-time measurement" command for the @p meas_mode provided by the caller.
+ * 2. Wait until the measurement is ready using a timer. The time it takes to take a measurement depends on @p meas_mode
+ * and currently set measurement time (makes a difference only in high res modes).
+ * 3. Read measurement result from the device and convert it to illuminance measurement in lx.
+ *
+ * Once the sequence described above is complete, or an error occurs, @p cb is executed. "result_code" parameter of @p
+ * cb indicates success or reason for failure:
+ * - @ref SHT3X_RESULT_CODE_OK Successfully performed the read one time measurement sequence.
+ * - @ref SHT3X_RESULT_CODE_IO_ERR One of the I2C transactions in the sequence failed.
+ * - @ref SHT3X_RESULT_CODE_DRIVER_ERR Something went wrong in the code of this driver.
+ *
+ * @param[in] self BH1750 instance created by @ref bh1750_create.
+ * @param[in] meas_mode Measurement mode to use. Use one of @ref BH1750MeasMode.
+ * @param[out] meas_lx Resulting illuminance measurement in lx.
+ * @param[in] cb Callback to execute once the measurement is read out. @p meas_lx has a valid value when this callback
+ * is being executed, not before that.
+ * @param[in] user_data User data to pass to @p cb.
+ *
+ * @retval BH1750_RESULT_CODE_OK Successfully initiated reading a one-time measurement.
+ * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL, @p meas_lx is NULL, or @p meas_mode is not a valid
+ * measurement mode.
+ */
 uint8_t bh1750_read_one_time_measurement(BH1750 self, uint8_t meas_mode, uint32_t *const meas_lx, BH1750CompleteCb cb,
                                          void *user_data);
 
@@ -242,7 +268,7 @@ uint8_t bh1750_read_one_time_measurement(BH1750 self, uint8_t meas_mode, uint32_
  * The three high bits and five low bits are taken from the @p meas_time value.
  *
  * Once the set measurement time sequence is complete, or an error occurs, @p cb is executed. "result_code"
- * paramter of @p cb indicates success or reason for failure of the set measurement time sequence:
+ * parameter of @p cb indicates success or reason for failure of the set measurement time sequence:
  * - @ref SHT3X_RESULT_CODE_OK Successfully performed the set measurement time sequence.
  * - @ref SHT3X_RESULT_CODE_IO_ERR One of the I2C transactions failed.
  * - @ref BH1750_RESULT_CODE_DRIVER_ERR Something went wrong in the code of this driver.
