@@ -736,7 +736,7 @@ uint8_t bh1750_set_measurement_time(BH1750 self, uint8_t meas_time, BH1750Comple
     if (!self || !is_valid_meas_time(meas_time)) {
         return BH1750_RESULT_CODE_INVALID_ARG;
     }
-    if (!self->initialized) {
+    if (!self->initialized || self->cont_meas_ongoing) {
         return BH1750_RESULT_CODE_INVALID_USAGE;
     }
 

@@ -295,6 +295,17 @@ uint8_t bh1750_read_one_time_measurement(BH1750 self, uint8_t meas_mode, uint32_
  *
  * The three high bits and five low bits are taken from the @p meas_time value.
  *
+ * It is not allowed to call this function when continuous measurement is ongoing. Two reasons:
+ * 1. Setting measurement time involves writing two registers. If the measurement time is used after one register is
+ * written but before the second one is written, then an undesired measurement time will be used for the measurement.
+ * 2. In the datasheet (p. 11), it is shown in the sequence that after setting measurement time in Mtreg, a measurement
+ * command (one shot or contnuous) needs to be sent. So it is possible that setting measurement time and not resending
+ * the "start continuous measurement" command will result in the measurement time not being changed.
+ *
+ * If continuous measurement was started by calling @ref bh1750_start_continuous_measurement, it can be stopped by
+ * calling @ref bh1750_power_on or @ref bh1750_power_down. After that, this function can be called to set the
+ * measurement time.
+ *
  * Once the set measurement time sequence is complete, or an error occurs, @p cb is executed. "result_code"
  * parameter of @p cb indicates success or reason for failure of the set measurement time sequence:
  * - @ref SHT3X_RESULT_CODE_OK Successfully performed the set measurement time sequence.
@@ -308,7 +319,7 @@ uint8_t bh1750_read_one_time_measurement(BH1750 self, uint8_t meas_mode, uint32_
  *
  * @retval BH1750_RESULT_CODE_OK Successfully initiated set measurement time.
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL, or @p meas_time is not within the allowed range.
- * @retval BH1750_RESULT_CODE_INVALID_USAGE Instance is not yet initialized, call @ref bh1750_init first.
+ * @retval BH1750_RESULT_CODE_INVALID_USAGE Instance is not yet initialized, or continuous measurement is ongoing.
  * @retval BH1750_RESULT_CODE_DRIVER_ERR Something went weong in the code of this driver.
  */
 uint8_t bh1750_set_measurement_time(BH1750 self, uint8_t meas_time, BH1750CompleteCb cb, void *user_data);
