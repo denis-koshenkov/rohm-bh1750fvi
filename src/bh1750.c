@@ -5,6 +5,11 @@
 #include "bh1750.h"
 #include "bh1750_private.h"
 
+/** BH1750 I2C address when the ADDR pin is low. */
+#define BH1750_I2C_ADDR_ADDR_LOW 0x23
+/** BH1750 I2C address when the ADDR pin is high. */
+#define BH1750_I2C_ADDR_ADDR_HIGH 0x5C
+
 /** Result of (1.0f / 1.2f). Stored in a constant so that this math is not performed for every raw meas -> lx
  * conversion. */
 #define BH1750_CONVERSION_MAGIC 0.8333333f
@@ -40,6 +45,19 @@
 #define BH1750_DEFAULT_MEAS_TIME_FIVE_LSB 0x5U  // bin: 00101
 
 /**
+ * @brief Check if I2C address is a valid BH1750 I2C address.
+ *
+ * @param i2c_addr I2C address.
+ *
+ * @retval true I2C address is valid.
+ * @retval false I2C address is invalid.
+ */
+static bool is_valid_i2c_addr(uint8_t i2c_addr)
+{
+    return (i2c_addr == BH1750_I2C_ADDR_ADDR_LOW) || (i2c_addr == BH1750_I2C_ADDR_ADDR_HIGH);
+}
+
+/**
  * @brief Check whether init config is valid.
  *
  * @param[in] cfg Init config.
@@ -49,7 +67,15 @@
  */
 static bool is_valid_init_cfg(const BH1750InitConfig *const cfg)
 {
-    return (cfg->get_instance_memory && cfg->i2c_write && cfg->i2c_read && cfg->start_timer);
+    // clang-format off
+    return (
+        (cfg->get_instance_memory)
+        && (cfg->i2c_write)
+        && (cfg->i2c_read)
+        && (cfg->start_timer)
+        && is_valid_i2c_addr(cfg->i2c_addr)
+    );
+    // clang-format on
 }
 
 /**
@@ -562,7 +588,7 @@ static void read_one_time_meas_part_2(uint8_t result_code, void *user_data)
 
 uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg)
 {
-    if (!inst || !is_valid_init_cfg(cfg)) {
+    if (!inst || !cfg || !is_valid_init_cfg(cfg)) {
         return BH1750_RESULT_CODE_INVALID_ARG;
     }
 
@@ -682,4 +708,16 @@ uint8_t bh1750_set_measurement_time(BH1750 self, uint8_t meas_time, BH1750Comple
 
     start_sequence(self, (void *)cb, user_data);
     return set_meas_time_part_1(self, meas_time);
+}
+
+uint8_t bh1750_destroy(BH1750 self, BH1750FreeInstanceMemory free_instance_memory, void *user_data)
+{
+    if (!self) {
+        return BH1750_RESULT_CODE_INVALID_ARG;
+    }
+
+    if (free_instance_memory) {
+        free_instance_memory((void *)self, user_data);
+    }
+    return BH1750_RESULT_CODE_OK;
 }

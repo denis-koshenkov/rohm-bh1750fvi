@@ -10,7 +10,7 @@ extern "C"
 
 void *mock_bh1750_get_instance_memory(void *user_data);
 
-void mock_bh1750_free_instance_memory(void *instance_memory, void *user_data);
+void mock_bh1750_free_instance_memory(void *inst_mem, void *user_data);
 
 void mock_bh1750_i2c_write(uint8_t *data, size_t length, uint8_t i2c_addr, void *user_data, BH1750_I2CCompleteCb cb,
                            void *cb_user_data);

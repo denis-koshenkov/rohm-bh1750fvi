@@ -44,6 +44,23 @@ typedef struct BH1750Struct *BH1750;
 typedef void *(*BH1750GetInstanceMemory)(void *user_data);
 
 /**
+ * @brief Function type definition to free BH1750 instance memory.
+ *
+ * This function allows the caller to free BH1750 instance memory when destroying a BH1750 instance. The @p inst_mem
+ * parameter will contain the pointer that was returned from @ref BH1750GetInstanceMemory when the instance was created.
+ *
+ * For example, if the instance memory was dynamically allocated in the implementation of @ref BH1750GetInstanceMemory,
+ * the implementation of this function would free that memory.
+ *
+ * Using this function is optional. If the instance memory is allocated statically, there is no need to use this
+ * function.
+ *
+ * @param inst_mem Pointer that was returned from @ref BH1750GetInstanceMemory when the instance was created.
+ * @param user_data User data.
+ */
+typedef void (*BH1750FreeInstanceMemory)(void *inst_mem, void *user_data);
+
+/**
  * @brief Callback type to execute when the BH1750 driver finishes an operation.
  *
  * @param result_code Indicates success or the reason for failure. One of @ref BH1750ResultCode.
@@ -283,6 +300,19 @@ uint8_t bh1750_read_one_time_measurement(BH1750 self, uint8_t meas_mode, uint32_
  * @retval BH1750_RESULT_CODE_DRIVER_ERR Something went weong in the code of this driver.
  */
 uint8_t bh1750_set_measurement_time(BH1750 self, uint8_t meas_time, BH1750CompleteCb cb, void *user_data);
+
+/**
+ * @brief Destroy a BH1750 instance.
+ *
+ * @param[in] self BH1750 instance created by @ref bh1750_create.
+ * @param[in] free_instance_memory Optional callback to give the caller a chance to free BH1750 instance memory, if
+ * required. See @ref BH1750FreeInstanceMemory.
+ * @param[in] user_data User data to pass to @p free_instance_memory callback.
+ *
+ * @retval BH1750_RESULT_CODE_OK Successfully destroyed BH1750 instance.
+ * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL.
+ */
+uint8_t bh1750_destroy(BH1750 self, BH1750FreeInstanceMemory free_instance_memory, void *user_data);
 
 #ifdef __cplusplus
 }

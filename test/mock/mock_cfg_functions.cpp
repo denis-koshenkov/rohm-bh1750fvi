@@ -7,11 +7,11 @@ void *mock_bh1750_get_instance_memory(void *user_data)
     return mock().pointerReturnValue();
 }
 
-void mock_bh1750_free_instance_memory(void *instance_memory, void *user_data)
+void mock_bh1750_free_instance_memory(void *inst_mem, void *user_data)
 {
     mock()
         .actualCall("mock_bh1750_free_instance_memory")
-        .withParameter("instance_memory", instance_memory)
+        .withParameter("inst_mem", inst_mem)
         .withParameter("user_data", user_data);
 }
 

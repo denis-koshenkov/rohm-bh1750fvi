@@ -1692,3 +1692,50 @@ TEST(BH1750, ReadOneTimeMeasLResModeMeasTime138)
     };
     test_read_one_time_meas(&cfg);
 }
+
+TEST(BH1750, CreateSuccessDefaultI2cAddr)
+{
+    init_cfg.i2c_addr = BH1750_TEST_DEFAULT_I2C_ADDR;
+    uint8_t rc = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc);
+}
+
+TEST(BH1750, CreateSuccessAltI2cAddr)
+{
+    init_cfg.i2c_addr = BH1750_TEST_ALT_I2C_ADDR;
+    uint8_t rc = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc);
+}
+
+TEST(BH1750, DestroyNoFreeCb)
+{
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+
+    uint8_t rc = bh1750_destroy(bh1750, NULL, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc);
+}
+
+TEST(BH1750, DestroyCallsFreeCb)
+{
+    void *user_data = (void *)0x18;
+    mock()
+        .expectOneCall("mock_bh1750_free_instance_memory")
+        .withParameter("inst_mem", (void *)&instance_memory)
+        .withParameter("user_data", user_data);
+
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+
+    uint8_t rc = bh1750_destroy(bh1750, mock_bh1750_free_instance_memory, user_data);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc);
+}
+
+TEST(BH1750, DestroySelfNull)
+{
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+
+    uint8_t rc = bh1750_destroy(NULL, mock_bh1750_free_instance_memory, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_ARG, rc);
+}

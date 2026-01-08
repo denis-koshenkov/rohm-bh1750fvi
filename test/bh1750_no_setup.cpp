@@ -88,6 +88,14 @@ TEST(BH1750NoSetup, CreateReturnsInvalidArgInstNull)
     CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_ARG, rc);
 }
 
+TEST(BH1750NoSetup, CreateReturnsInvalidArgCfgNull)
+{
+    BH1750 bh1750;
+    uint8_t rc = bh1750_create(&bh1750, NULL);
+
+    CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_ARG, rc);
+}
+
 TEST(BH1750NoSetup, CreateReturnsInvalidArgGetMemoryInstanceNull)
 {
     BH1750 bh1750;
@@ -127,6 +135,17 @@ TEST(BH1750NoSetup, CreateReturnsInvalidArgStartTimerNull)
     BH1750InitConfig cfg;
     populate_default_init_cfg(&cfg);
     cfg.start_timer = NULL;
+    uint8_t rc = bh1750_create(&bh1750, &cfg);
+
+    CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_ARG, rc);
+}
+
+TEST(BH1750NoSetup, CreateReturnsInvalidArgInvalidI2cAddr)
+{
+    BH1750 bh1750;
+    BH1750InitConfig cfg;
+    populate_default_init_cfg(&cfg);
+    cfg.i2c_addr = 0xFF; /* Invalid I2C address */
     uint8_t rc = bh1750_create(&bh1750, &cfg);
 
     CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_ARG, rc);
