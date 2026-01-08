@@ -1837,3 +1837,54 @@ TEST(BH1750, DestroyBeforeInitAllowed)
     uint8_t rc = bh1750_destroy(bh1750, mock_bh1750_free_instance_memory, NULL);
     CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc);
 }
+
+TEST(BH1750, FunctionsCannotBeCalledAfterFailedInit)
+{
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+
+    /* Power on command */
+    uint8_t i2c_write_data_1 = 0x01;
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", &i2c_write_data_1, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", init_cfg.i2c_addr)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+    /* Set three most significant bits of MTreg to 010 */
+    uint8_t i2c_write_data_2 = 0x42;
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", &i2c_write_data_2, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", init_cfg.i2c_addr)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+    /* Set five least significant bits of MTreg to 00101 */
+    uint8_t i2c_write_data_3 = 0x65;
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", &i2c_write_data_3, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", init_cfg.i2c_addr)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+
+    void *complete_cb_user_data_expected = (void *)0x14;
+    uint8_t rc_init = bh1750_init(bh1750, bh1750_complete_cb, complete_cb_user_data_expected);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_init);
+    i2c_write_complete_cb(BH1750_I2C_RESULT_CODE_OK, i2c_write_complete_cb_user_data);
+    i2c_write_complete_cb(BH1750_I2C_RESULT_CODE_OK, i2c_write_complete_cb_user_data);
+    /* Last I2C transaction fails */
+    i2c_write_complete_cb(BH1750_I2C_RESULT_CODE_ERR, i2c_write_complete_cb_user_data);
+
+    CHECK_EQUAL(1, complete_cb_call_count);
+    CHECK_EQUAL(BH1750_RESULT_CODE_IO_ERR, complete_cb_result_code);
+    CHECK_EQUAL(complete_cb_user_data_expected, complete_cb_user_data);
+
+    /* Now, setting measurement time should fail with INVALID_USAGE because init did not complete successfully */
+    uint8_t meas_time = 71;
+    uint8_t rc = bh1750_set_measurement_time(bh1750, meas_time, bh1750_complete_cb, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_USAGE, rc);
+}
