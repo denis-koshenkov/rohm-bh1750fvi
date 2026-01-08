@@ -432,6 +432,15 @@ static void set_meas_time_part_3(uint8_t result_code, void *user_data)
     }
 
     self->meas_time = self->meas_time_to_set;
+    /* This function is the last part of two sequences: init sequence and set measurement time sequence. At the end of
+     * successful init sequence, we need to set the initialized flag to true. In theory, we do not need to do it at the
+     * end of the set measurement time sequence.
+     * However, if we are performing the set measurement time sequence, that means the instance is initialized. This
+     * means there is no harm in setting the initialized flag again.
+     * The alternative is to introduce state to check whether we are performing init sequence or set measurement time
+     * sequence, and only set this flag in case of init sequence. We do not do this, since this adds complexity, and we
+     * can get away with setting the flag in both sequences. */
+    self->initialized = true;
     execute_complete_cb(self, BH1750_RESULT_CODE_OK);
 }
 
@@ -608,6 +617,7 @@ uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg)
     /* Will be populated during init where we set the default measurement time (69). Initialized here as a safety
      * measure so that we do not access an uninitialized variable. */
     (*inst)->meas_time = 0;
+    (*inst)->initialized = false;
 
     return BH1750_RESULT_CODE_OK;
 }
@@ -616,6 +626,10 @@ uint8_t bh1750_init(BH1750 self, BH1750CompleteCb cb, void *user_data)
 {
     if (!self) {
         return BH1750_RESULT_CODE_INVALID_ARG;
+    }
+    if (self->initialized) {
+        /* Already initialized, this function should only be called once per instance. */
+        return BH1750_RESULT_CODE_INVALID_USAGE;
     }
 
     start_sequence(self, (void *)cb, user_data);

@@ -60,6 +60,8 @@ struct BH1750Struct {
      * Used for converting raw measurements to light intensity in lx.
      */
     uint8_t meas_time;
+    /** @brief Whether the instance is initialized. Set to true after init is called successfully. */
+    bool initialized;
 };
 
 #ifdef __cplusplus

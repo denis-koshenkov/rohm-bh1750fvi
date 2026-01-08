@@ -1739,3 +1739,13 @@ TEST(BH1750, DestroySelfNull)
     uint8_t rc = bh1750_destroy(NULL, mock_bh1750_free_instance_memory, NULL);
     CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_ARG, rc);
 }
+
+TEST(BH1750, InitCalledTwice)
+{
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+    call_init();
+
+    uint8_t rc = bh1750_init(bh1750, bh1750_complete_cb, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_USAGE, rc);
+}
