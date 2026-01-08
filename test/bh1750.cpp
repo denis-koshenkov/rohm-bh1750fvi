@@ -200,6 +200,7 @@ static void test_send_cmd_func(bool is_start_meas_cmd, uint8_t meas_mode, SendCm
     init_cfg.i2c_addr = i2c_addr;
     uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
     CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+    call_init();
 
     mock()
         .expectOneCall("mock_bh1750_i2c_write")
@@ -261,6 +262,7 @@ static void test_invalid_arg(BH1750 *inst_p, uint8_t test_type, void *test_type_
     BH1750 *inst_p_to_create = inst_p ? inst_p : &bh1750;
     uint8_t rc_create = bh1750_create(inst_p_to_create, &init_cfg);
     CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+    call_init();
 
     void *complete_cb_user_data_expected = (void *)0x11;
     BH1750 inst = inst_p ? *inst_p : NULL;
@@ -507,6 +509,7 @@ static void test_set_meas_time(uint8_t i2c_addr, uint8_t meas_time, uint8_t *i2c
     init_cfg.i2c_addr = i2c_addr;
     uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
     CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+    call_init();
 
     mock()
         .expectOneCall("mock_bh1750_i2c_write")
@@ -974,6 +977,7 @@ TEST(BH1750, ReadContMeasCalledBeforeStartContMeas)
 {
     uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
     CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+    call_init();
 
     uint32_t meas_lx;
     uint8_t rc = bh1750_read_continuous_measurement(bh1750, &meas_lx, bh1750_complete_cb, NULL);
@@ -984,6 +988,7 @@ TEST(BH1750, ReadContMeasCalledAfterFailedStartContMeas)
 {
     uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
     CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+    call_init();
 
     /* Start continuous measurement in H-resolution mode cmd */
     uint8_t i2c_write_data = 0x10;
@@ -1711,6 +1716,7 @@ TEST(BH1750, DestroyNoFreeCb)
 {
     uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
     CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+    call_init();
 
     uint8_t rc = bh1750_destroy(bh1750, NULL, NULL);
     CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc);
@@ -1718,14 +1724,15 @@ TEST(BH1750, DestroyNoFreeCb)
 
 TEST(BH1750, DestroyCallsFreeCb)
 {
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+    call_init();
+
     void *user_data = (void *)0x18;
     mock()
         .expectOneCall("mock_bh1750_free_instance_memory")
         .withParameter("inst_mem", (void *)&instance_memory)
         .withParameter("user_data", user_data);
-
-    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
-    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
 
     uint8_t rc = bh1750_destroy(bh1750, mock_bh1750_free_instance_memory, user_data);
     CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc);
@@ -1735,6 +1742,7 @@ TEST(BH1750, DestroySelfNull)
 {
     uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
     CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+    call_init();
 
     uint8_t rc = bh1750_destroy(NULL, mock_bh1750_free_instance_memory, NULL);
     CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_ARG, rc);
@@ -1748,4 +1756,84 @@ TEST(BH1750, InitCalledTwice)
 
     uint8_t rc = bh1750_init(bh1750, bh1750_complete_cb, NULL);
     CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_USAGE, rc);
+}
+
+TEST(BH1750, PowerOnBeforeInit)
+{
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+
+    uint8_t rc = bh1750_power_on(bh1750, bh1750_complete_cb, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_USAGE, rc);
+}
+
+TEST(BH1750, PowerDownBeforeInit)
+{
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+
+    uint8_t rc = bh1750_power_down(bh1750, bh1750_complete_cb, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_USAGE, rc);
+}
+
+TEST(BH1750, ResetBeforeInit)
+{
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+
+    uint8_t rc = bh1750_reset(bh1750, bh1750_complete_cb, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_USAGE, rc);
+}
+
+TEST(BH1750, StartContMeasBeforeInit)
+{
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+
+    uint8_t rc = bh1750_start_continuous_measurement(bh1750, BH1750_MEAS_MODE_H_RES, bh1750_complete_cb, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_USAGE, rc);
+}
+
+TEST(BH1750, ReadContMeasBeforeInit)
+{
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+
+    uint32_t meas_lx;
+    uint8_t rc = bh1750_read_continuous_measurement(bh1750, &meas_lx, bh1750_complete_cb, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_USAGE, rc);
+}
+
+TEST(BH1750, ReadOneTimeMeasBeforeInit)
+{
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+
+    uint32_t meas_lx;
+    uint8_t rc = bh1750_read_one_time_measurement(bh1750, BH1750_MEAS_MODE_L_RES, &meas_lx, bh1750_complete_cb, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_USAGE, rc);
+}
+
+TEST(BH1750, SetMeasTimeBeforeInit)
+{
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+
+    uint8_t meas_time = 70;
+    uint8_t rc = bh1750_set_measurement_time(bh1750, meas_time, bh1750_complete_cb, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_USAGE, rc);
+}
+
+TEST(BH1750, DestroyBeforeInitAllowed)
+{
+    mock()
+        .expectOneCall("mock_bh1750_free_instance_memory")
+        .withParameter("inst_mem", (void *)&instance_memory)
+        .withParameter("user_data", (void *)NULL);
+
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+
+    uint8_t rc = bh1750_destroy(bh1750, mock_bh1750_free_instance_memory, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc);
 }

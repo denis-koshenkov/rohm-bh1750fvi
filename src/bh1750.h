@@ -112,6 +112,11 @@ uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg);
 /**
  * @brief Initialize a BH1750 instance.
  *
+ * This function must be called once after the instance is created. All other functions can be called only after that
+ * (except @ref bh1750_destroy, that one can be called before this function).
+ *
+ * This function must only be called once per instance.
+ *
  * Performs the following steps:
  * 1. Powers on BH1750 (equivalent to calling @ref bh1750_power_on).
  * 2. Sets measurement time to 69 (default). Equivalent to calling @ref bh1750_set_measurement_time with "meas_time"
@@ -129,6 +134,7 @@ uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg);
  *
  * @retval BH1750_RESULT_CODE_OK Successfully initiated the first step of init sequence.
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL.
+ * @retval BH1750_RESULT_CODE_INVALID_USAGE Instance was already initialized.
  */
 uint8_t bh1750_init(BH1750 self, BH1750CompleteCb cb, void *user_data);
 
@@ -148,6 +154,7 @@ uint8_t bh1750_init(BH1750 self, BH1750CompleteCb cb, void *user_data);
  *
  * @retval BH1750_RESULT_CODE_OK Successfully initiated power on.
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL.
+ * @retval BH1750_RESULT_CODE_INVALID_USAGE Instance is not yet initialized, call @ref bh1750_init first.
  */
 uint8_t bh1750_power_on(BH1750 self, BH1750CompleteCb cb, void *user_data);
 
@@ -167,6 +174,7 @@ uint8_t bh1750_power_on(BH1750 self, BH1750CompleteCb cb, void *user_data);
  *
  * @retval BH1750_RESULT_CODE_OK Successfully initiated power down.
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL.
+ * @retval BH1750_RESULT_CODE_INVALID_USAGE Instance is not yet initialized, call @ref bh1750_init first.
  */
 uint8_t bh1750_power_down(BH1750 self, BH1750CompleteCb cb, void *user_data);
 
@@ -189,6 +197,7 @@ uint8_t bh1750_power_down(BH1750 self, BH1750CompleteCb cb, void *user_data);
  *
  * @retval BH1750_RESULT_CODE_OK Successfully initiated reset.
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL.
+ * @retval BH1750_RESULT_CODE_INVALID_USAGE Instance is not yet initialized, call @ref bh1750_init first.
  *
  * @note This command does not work in power down mode. Make sure the device is in power on mode before calling this
  * function.
@@ -213,6 +222,7 @@ uint8_t bh1750_reset(BH1750 self, BH1750CompleteCb cb, void *user_data);
  *
  * @retval BH1750_RESULT_CODE_OK Successfully initiated start continuous measurement.
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL, or @p meas_mode is not a valid measurement mode.
+ * @retval BH1750_RESULT_CODE_INVALID_USAGE Instance is not yet initialized, call @ref bh1750_init first.
  */
 uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH1750CompleteCb cb, void *user_data);
 
@@ -271,6 +281,7 @@ uint8_t bh1750_read_continuous_measurement(BH1750 self, uint32_t *const meas_lx,
  * @retval BH1750_RESULT_CODE_OK Successfully initiated reading a one-time measurement.
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL, @p meas_lx is NULL, or @p meas_mode is not a valid
  * measurement mode.
+ * @retval BH1750_RESULT_CODE_INVALID_USAGE Instance is not yet initialized, call @ref bh1750_init first.
  */
 uint8_t bh1750_read_one_time_measurement(BH1750 self, uint8_t meas_mode, uint32_t *const meas_lx, BH1750CompleteCb cb,
                                          void *user_data);
@@ -297,12 +308,15 @@ uint8_t bh1750_read_one_time_measurement(BH1750 self, uint8_t meas_mode, uint32_
  *
  * @retval BH1750_RESULT_CODE_OK Successfully initiated set measurement time.
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL, or @p meas_time is not within the allowed range.
+ * @retval BH1750_RESULT_CODE_INVALID_USAGE Instance is not yet initialized, call @ref bh1750_init first.
  * @retval BH1750_RESULT_CODE_DRIVER_ERR Something went weong in the code of this driver.
  */
 uint8_t bh1750_set_measurement_time(BH1750 self, uint8_t meas_time, BH1750CompleteCb cb, void *user_data);
 
 /**
  * @brief Destroy a BH1750 instance.
+ *
+ * It is allowed to call this function before @ref bh1750_init is called.
  *
  * @param[in] self BH1750 instance created by @ref bh1750_create.
  * @param[in] free_instance_memory Optional callback to give the caller a chance to free BH1750 instance memory, if

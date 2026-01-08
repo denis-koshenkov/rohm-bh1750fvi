@@ -643,6 +643,9 @@ uint8_t bh1750_power_on(BH1750 self, BH1750CompleteCb cb, void *user_data)
     if (!self) {
         return BH1750_RESULT_CODE_INVALID_ARG;
     }
+    if (!self->initialized) {
+        return BH1750_RESULT_CODE_INVALID_USAGE;
+    }
 
     start_sequence(self, (void *)cb, user_data);
     send_power_on_cmd(self, generic_i2c_complete_cb, (void *)self);
@@ -653,6 +656,9 @@ uint8_t bh1750_power_down(BH1750 self, BH1750CompleteCb cb, void *user_data)
 {
     if (!self) {
         return BH1750_RESULT_CODE_INVALID_ARG;
+    }
+    if (!self->initialized) {
+        return BH1750_RESULT_CODE_INVALID_USAGE;
     }
 
     start_sequence(self, (void *)cb, user_data);
@@ -665,6 +671,9 @@ uint8_t bh1750_reset(BH1750 self, BH1750CompleteCb cb, void *user_data)
     if (!self) {
         return BH1750_RESULT_CODE_INVALID_ARG;
     }
+    if (!self->initialized) {
+        return BH1750_RESULT_CODE_INVALID_USAGE;
+    }
 
     start_sequence(self, (void *)cb, user_data);
     send_reset_cmd(self, generic_i2c_complete_cb, (void *)self);
@@ -675,6 +684,9 @@ uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH17
 {
     if (!self || !is_valid_meas_mode(meas_mode)) {
         return BH1750_RESULT_CODE_INVALID_ARG;
+    }
+    if (!self->initialized) {
+        return BH1750_RESULT_CODE_INVALID_USAGE;
     }
 
     start_sequence(self, (void *)cb, user_data);
@@ -688,7 +700,9 @@ uint8_t bh1750_read_continuous_measurement(BH1750 self, uint32_t *const meas_lx,
     if (!self || !meas_lx) {
         return BH1750_RESULT_CODE_INVALID_ARG;
     }
-    if (!self->cont_meas_ongoing) {
+    /* Technically, initialized check is not necessary, because cont_meas_ongoing can become true only when the instance
+     * is initialized. */
+    if (!self->initialized || !self->cont_meas_ongoing) {
         return BH1750_RESULT_CODE_INVALID_USAGE;
     }
 
@@ -704,6 +718,9 @@ uint8_t bh1750_read_one_time_measurement(BH1750 self, uint8_t meas_mode, uint32_
     if (!self || !meas_lx || !is_valid_meas_mode(meas_mode)) {
         return BH1750_RESULT_CODE_INVALID_ARG;
     }
+    if (!self->initialized) {
+        return BH1750_RESULT_CODE_INVALID_USAGE;
+    }
 
     start_sequence(self, (void *)cb, user_data);
     /* So that the last part of the sequence can write the result to meas_lx */
@@ -718,6 +735,9 @@ uint8_t bh1750_set_measurement_time(BH1750 self, uint8_t meas_time, BH1750Comple
 {
     if (!self || !is_valid_meas_time(meas_time)) {
         return BH1750_RESULT_CODE_INVALID_ARG;
+    }
+    if (!self->initialized) {
+        return BH1750_RESULT_CODE_INVALID_USAGE;
     }
 
     start_sequence(self, (void *)cb, user_data);
