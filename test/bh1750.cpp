@@ -2051,3 +2051,65 @@ TEST(BH1750, DestroyBusy)
 {
     test_busy_if_seq_in_progress(destroy);
 }
+
+static void test_i2c_write_seq_cannot_be_interrupted(uint8_t *i2c_write_data, uint8_t i2c_write_rc,
+                                                     BH1750Function start_seq)
+{
+    if (!start_seq || !i2c_write_data) {
+        FAIL_TEST("Invalid args");
+    }
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+    call_init();
+
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", i2c_write_data, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", init_cfg.i2c_addr)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+    /* Power on command */
+    uint8_t i2c_write_data_power_on = 0x1;
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", &i2c_write_data_power_on, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", init_cfg.i2c_addr)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+
+    uint8_t rc = start_seq();
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc);
+
+    uint8_t other_cmd_rc;
+    other_cmd_rc = bh1750_power_on(bh1750, NULL, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_BUSY, other_cmd_rc);
+
+    i2c_write_complete_cb(i2c_write_rc, i2c_write_complete_cb_user_data);
+
+    /* Sequence finished, other operations are now allowed */
+    other_cmd_rc = bh1750_power_on(bh1750, NULL, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, other_cmd_rc);
+}
+
+TEST(BH1750, PowerOnCannotBeInterrupted)
+{
+    /* Power on command */
+    uint8_t i2c_write_data = 0x1;
+    test_i2c_write_seq_cannot_be_interrupted(&i2c_write_data, BH1750_I2C_RESULT_CODE_OK, power_on);
+}
+
+TEST(BH1750, PowerDownCannotBeInterrupted)
+{
+    /* Power down command */
+    uint8_t i2c_write_data = 0x0;
+    test_i2c_write_seq_cannot_be_interrupted(&i2c_write_data, BH1750_I2C_RESULT_CODE_ERR, power_down);
+}
+
+TEST(BH1750, ResetCannotBeInterrupted)
+{
+    /* Reset command */
+    uint8_t i2c_write_data = 0x07;
+    test_i2c_write_seq_cannot_be_interrupted(&i2c_write_data, BH1750_I2C_RESULT_CODE_OK, reset);
+}
