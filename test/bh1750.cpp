@@ -2113,3 +2113,52 @@ TEST(BH1750, ResetCannotBeInterrupted)
     uint8_t i2c_write_data = 0x07;
     test_i2c_write_seq_cannot_be_interrupted(&i2c_write_data, BH1750_I2C_RESULT_CODE_OK, reset);
 }
+
+TEST(BH1750, StartContMeasCannotBeInterrupted)
+{
+    /* Start continuous measurement in high res cmd */
+    uint8_t i2c_write_data = 0x10;
+    test_i2c_write_seq_cannot_be_interrupted(&i2c_write_data, BH1750_I2C_RESULT_CODE_ERR, start_continuous_measurement);
+}
+
+TEST(BH1750, ReadContMeasCannotBeInterrupted)
+{
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+    call_init();
+    /* Start continuous measurement in high res cmd */
+    uint8_t i2c_write_data = 0x10;
+    call_start_continuous_measurement(&i2c_write_data, BH1750_MEAS_MODE_H_RES);
+
+    uint8_t i2c_read_data[] = {0xFF, 0xFF}; /* Exact data does not matter */
+    mock()
+        .expectOneCall("mock_bh1750_i2c_read")
+        .withOutputParameterReturning("data", i2c_read_data, 2)
+        .withParameter("length", 2)
+        .withParameter("i2c_addr", init_cfg.i2c_addr)
+        .withParameter("user_data", i2c_read_user_data)
+        .ignoreOtherParameters();
+    /* Power on command */
+    uint8_t i2c_write_data_power_on = 0x1;
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", &i2c_write_data_power_on, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", init_cfg.i2c_addr)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+
+    uint32_t meas_lx;
+    uint8_t rc = bh1750_read_continuous_measurement(bh1750, &meas_lx, bh1750_complete_cb, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc);
+
+    uint8_t other_cmd_rc;
+    other_cmd_rc = bh1750_power_on(bh1750, NULL, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_BUSY, other_cmd_rc);
+
+    i2c_read_complete_cb(BH1750_I2C_RESULT_CODE_OK, i2c_read_complete_cb_user_data);
+
+    /* Sequence finished, other operations are now allowed */
+    other_cmd_rc = bh1750_power_on(bh1750, NULL, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, other_cmd_rc);
+}
