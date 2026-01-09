@@ -62,6 +62,8 @@ struct BH1750Struct {
     uint8_t meas_time;
     /** @brief Whether the instance is initialized. Set to true after init is called successfully. */
     bool initialized;
+    /** @brief True if there is currently a sequence ongoing, false otherwise. */
+    bool is_seq_ongoing;
 };
 
 #ifdef __cplusplus

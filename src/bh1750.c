@@ -207,6 +207,36 @@ static uint8_t get_one_time_meas_cmd_code(uint8_t meas_mode)
 }
 
 /**
+ * @brief Start a sequence.
+ *
+ * Saves @p cb and @p user_data as sequence callback and user data, so that they can be executed once the sequence is
+ * complete.
+ *
+ * @param[in] self BH1750 instance.
+ * @param[in] cb Callback to execute once the sequence is complete.
+ * @param[in] user_data User data to pass to @p cb.
+ */
+static void start_sequence(BH1750 self, void *cb, void *user_data)
+{
+    self->seq_cb = cb;
+    self->seq_cb_user_data = user_data;
+    self->is_seq_ongoing = true;
+}
+
+/**
+ * @brief End the ongoing sequence.
+ *
+ * Must be called whenever a sequence is ended, so that other public functions can be called again. Otherwise, public
+ * function will keep returning @ref BH1750_RESULT_CODE_BUSY.
+ *
+ * @param[in] self BH1750 instance.
+ */
+static void end_sequence(BH1750 self)
+{
+    self->is_seq_ongoing = false;
+}
+
+/**
  * @brief Interpret self->seq_cb as BH1750CompleteCb and execute it, if present.
  *
  * @param[in] self BH1750 instance.
@@ -214,6 +244,7 @@ static uint8_t get_one_time_meas_cmd_code(uint8_t meas_mode)
  */
 static void execute_complete_cb(BH1750 self, uint8_t rc)
 {
+    end_sequence(self);
     BH1750CompleteCb cb = (BH1750CompleteCb)self->seq_cb;
     if (cb) {
         cb(rc, self->seq_cb_user_data);
@@ -238,22 +269,6 @@ static void generic_i2c_complete_cb(uint8_t result_code, void *user_data)
 
     uint8_t rc = (result_code == BH1750_I2C_RESULT_CODE_OK) ? BH1750_RESULT_CODE_OK : BH1750_RESULT_CODE_IO_ERR;
     execute_complete_cb(self, rc);
-}
-
-/**
- * @brief Start a sequence.
- *
- * Saves @p cb and @p user_data as sequence callback and user data, so that they can be executed once the sequence is
- * complete.
- *
- * @param[in] self BH1750 instance.
- * @param[in] cb Callback to execute once the sequence is complete.
- * @param[in] user_data User data to pass to @p cb.
- */
-static void start_sequence(BH1750 self, void *cb, void *user_data)
-{
-    self->seq_cb = cb;
-    self->seq_cb_user_data = user_data;
 }
 
 /**
@@ -482,17 +497,17 @@ static void set_meas_time_part_2(uint8_t result_code, void *user_data)
  * @retval BH1750_RESULT_CODE_OK Successfully initiated the first operation of set_meas_time sequence.
  * @retval BH1750_RESULT_CODE_DRIVER_ERR Something went wrong in the code of this driver.
  */
-static uint8_t set_meas_time_part_1(BH1750 self, uint8_t meas_time)
+static void set_meas_time_part_1(BH1750 self, uint8_t meas_time)
 {
     self->meas_time_to_set = meas_time;
 
     uint8_t meas_time_three_msb = get_three_msb_of_meas_time(meas_time);
-    uint8_t rc = set_mtreg_high_bit(self, meas_time_three_msb, set_meas_time_part_2, (void *)self);
-    if (rc != BH1750_RESULT_CODE_OK) {
-        /* If we are here, this means that get_three_msb_of_meas_time returned a value > 7. This should never happen. */
-        return BH1750_RESULT_CODE_DRIVER_ERR;
-    }
-    return BH1750_RESULT_CODE_OK;
+    /* Ignore return value. Since meas_time has been validated, it should always return OK. It is difficult to handle
+     * the case if the return code is not OK, because this function can be called from the first part of the
+     * set_meas_time sequence, and also from a later part of init sequence. We would need to return an error code, and
+     * handle these different scenarios in the callers of this function. This adds complexity and is not necessary,
+     * since meas_time has been validated. */
+    set_mtreg_high_bit(self, meas_time_three_msb, set_meas_time_part_2, (void *)self);
 }
 
 static void init_part_2(uint8_t result_code, void *user_data)
@@ -507,11 +522,7 @@ static void init_part_2(uint8_t result_code, void *user_data)
         return;
     }
 
-    uint8_t rc = set_meas_time_part_1(self, self->meas_time_to_set);
-    if (rc != BH1750_RESULT_CODE_OK) {
-        /* This should never happen */
-        execute_complete_cb(self, BH1750_RESULT_CODE_DRIVER_ERR);
-    }
+    set_meas_time_part_1(self, self->meas_time_to_set);
 }
 
 static void read_meas_final_part(uint8_t result_code, void *user_data)
@@ -618,6 +629,7 @@ uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg)
      * measure so that we do not access an uninitialized variable. */
     (*inst)->meas_time = 0;
     (*inst)->initialized = false;
+    (*inst)->is_seq_ongoing = false;
 
     return BH1750_RESULT_CODE_OK;
 }
@@ -645,6 +657,9 @@ uint8_t bh1750_power_on(BH1750 self, BH1750CompleteCb cb, void *user_data)
     }
     if (!self->initialized) {
         return BH1750_RESULT_CODE_INVALID_USAGE;
+    }
+    if (self->is_seq_ongoing) {
+        return BH1750_RESULT_CODE_BUSY;
     }
 
     start_sequence(self, (void *)cb, user_data);
@@ -741,7 +756,8 @@ uint8_t bh1750_set_measurement_time(BH1750 self, uint8_t meas_time, BH1750Comple
     }
 
     start_sequence(self, (void *)cb, user_data);
-    return set_meas_time_part_1(self, meas_time);
+    set_meas_time_part_1(self, meas_time);
+    return BH1750_RESULT_CODE_OK;
 }
 
 uint8_t bh1750_destroy(BH1750 self, BH1750FreeInstanceMemory free_instance_memory, void *user_data)

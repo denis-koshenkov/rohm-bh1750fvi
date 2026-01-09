@@ -1915,3 +1915,51 @@ TEST(BH1750, CannotSetMeasTimeWhenContMeasOngoing)
     uint8_t rc = bh1750_set_measurement_time(bh1750, meas_time, bh1750_complete_cb, NULL);
     CHECK_EQUAL(BH1750_RESULT_CODE_INVALID_USAGE, rc);
 }
+
+typedef uint8_t (*BH1750Function)();
+
+/**
+ * @brief Test that when a public BH1750 function is called when another sequence is in progress, BUSY result code is
+ * returned.
+ *
+ * Starts a "power down" sequence and does not execute the I2C write callback. Then, invokes @p function and expects
+ * that it will return BUSY result code, because the "power down" sequence is still in progress.
+ *
+ * @param function Function that should return BUSY result code.
+ */
+static void test_busy_if_seq_in_progress(BH1750Function function)
+{
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+    call_init();
+
+    /* Power down cmd */
+    uint8_t i2c_write_data = 0x0;
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", &i2c_write_data, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", init_cfg.i2c_addr)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+
+    uint8_t rc_power_down = bh1750_power_down(bh1750, NULL, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_power_down);
+    /* I2C write callback is not executed yet, so enable power down sequence is still in progres. The driver should
+     * reject attempts to start new sequences. */
+
+    uint8_t rc = function();
+    CHECK_EQUAL(BH1750_RESULT_CODE_BUSY, rc);
+    /* User cb should not be called when busy is returned */
+    CHECK_EQUAL(0, complete_cb_call_count);
+}
+
+static uint8_t power_on()
+{
+    return bh1750_power_on(bh1750, bh1750_complete_cb, NULL);
+}
+
+TEST(BH1750, PowerOnBusy)
+{
+    test_busy_if_seq_in_progress(power_on);
+}
