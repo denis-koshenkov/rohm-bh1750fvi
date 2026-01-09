@@ -2251,3 +2251,84 @@ TEST(BH1750, ReadOneTimeMeasCannotBeInterruptedSuccess)
     uint8_t i2c_read_rc = BH1750_I2C_RESULT_CODE_OK;
     test_read_one_time_meas_cannot_be_interrupted(i2c_write_rc, i2c_read_rc);
 }
+
+static void test_set_meas_time_cannot_be_interrupted(uint8_t i2c_write_rc_1, uint8_t i2c_write_rc_2)
+{
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+    call_init();
+
+    /* bin: 10001010 */
+    uint8_t meas_time = 138;
+    /* Set three most significant bits of MTreg to 100 */
+    uint8_t i2c_write_data_1 = 0x44;
+    /* Set five least significant bits of MTreg to 01010 */
+    uint8_t i2c_write_data_2 = 0x6A;
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", &i2c_write_data_1, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", init_cfg.i2c_addr)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+    if (i2c_write_rc_1 == BH1750_I2C_RESULT_CODE_OK) {
+        mock()
+            .expectOneCall("mock_bh1750_i2c_write")
+            .withMemoryBufferParameter("data", &i2c_write_data_2, 1)
+            .withParameter("length", 1)
+            .withParameter("i2c_addr", init_cfg.i2c_addr)
+            .withParameter("user_data", i2c_write_user_data)
+            .ignoreOtherParameters();
+    }
+    /* Power on command */
+    uint8_t i2c_write_data_power_on = 0x1;
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", &i2c_write_data_power_on, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", init_cfg.i2c_addr)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+
+    uint32_t meas_lx;
+    uint8_t rc = bh1750_set_measurement_time(bh1750, meas_time, bh1750_complete_cb, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc);
+
+    uint8_t other_cmd_rc;
+    other_cmd_rc = bh1750_power_on(bh1750, NULL, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_BUSY, other_cmd_rc);
+
+    i2c_write_complete_cb(i2c_write_rc_1, i2c_write_complete_cb_user_data);
+    if (i2c_write_rc_1 == BH1750_I2C_RESULT_CODE_OK) {
+        /* I2C write 2 is ongoing */
+        other_cmd_rc = bh1750_power_on(bh1750, NULL, NULL);
+        CHECK_EQUAL(BH1750_RESULT_CODE_BUSY, other_cmd_rc);
+
+        i2c_write_complete_cb(i2c_write_rc_2, i2c_write_complete_cb_user_data);
+    }
+
+    /* Sequence finished, other operations are now allowed */
+    other_cmd_rc = bh1750_power_on(bh1750, NULL, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, other_cmd_rc);
+}
+
+TEST(BH1750, SetMeasTimeCannotBeInterruptedWrite1Fail)
+{
+    uint8_t i2c_write_rc_1 = BH1750_I2C_RESULT_CODE_ERR;
+    uint8_t i2c_write_rc_2 = BH1750_I2C_RESULT_CODE_ERR;
+    test_set_meas_time_cannot_be_interrupted(i2c_write_rc_1, i2c_write_rc_2);
+}
+
+TEST(BH1750, SetMeasTimeCannotBeInterruptedWrite2Fail)
+{
+    uint8_t i2c_write_rc_1 = BH1750_I2C_RESULT_CODE_OK;
+    uint8_t i2c_write_rc_2 = BH1750_I2C_RESULT_CODE_ERR;
+    test_set_meas_time_cannot_be_interrupted(i2c_write_rc_1, i2c_write_rc_2);
+}
+
+TEST(BH1750, SetMeasTimeCannotBeInterruptedSuccess)
+{
+    uint8_t i2c_write_rc_1 = BH1750_I2C_RESULT_CODE_OK;
+    uint8_t i2c_write_rc_2 = BH1750_I2C_RESULT_CODE_OK;
+    test_set_meas_time_cannot_be_interrupted(i2c_write_rc_1, i2c_write_rc_2);
+}
