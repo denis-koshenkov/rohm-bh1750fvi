@@ -675,6 +675,9 @@ uint8_t bh1750_power_down(BH1750 self, BH1750CompleteCb cb, void *user_data)
     if (!self->initialized) {
         return BH1750_RESULT_CODE_INVALID_USAGE;
     }
+    if (self->is_seq_ongoing) {
+        return BH1750_RESULT_CODE_BUSY;
+    }
 
     start_sequence(self, (void *)cb, user_data);
     send_power_down_cmd(self, generic_i2c_complete_cb, (void *)self);
@@ -689,6 +692,9 @@ uint8_t bh1750_reset(BH1750 self, BH1750CompleteCb cb, void *user_data)
     if (!self->initialized) {
         return BH1750_RESULT_CODE_INVALID_USAGE;
     }
+    if (self->is_seq_ongoing) {
+        return BH1750_RESULT_CODE_BUSY;
+    }
 
     start_sequence(self, (void *)cb, user_data);
     send_reset_cmd(self, generic_i2c_complete_cb, (void *)self);
@@ -702,6 +708,9 @@ uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH17
     }
     if (!self->initialized) {
         return BH1750_RESULT_CODE_INVALID_USAGE;
+    }
+    if (self->is_seq_ongoing) {
+        return BH1750_RESULT_CODE_BUSY;
     }
 
     start_sequence(self, (void *)cb, user_data);
@@ -719,6 +728,9 @@ uint8_t bh1750_read_continuous_measurement(BH1750 self, uint32_t *const meas_lx,
      * is initialized. */
     if (!self->initialized || !self->cont_meas_ongoing) {
         return BH1750_RESULT_CODE_INVALID_USAGE;
+    }
+    if (self->is_seq_ongoing) {
+        return BH1750_RESULT_CODE_BUSY;
     }
 
     start_sequence(self, (void *)cb, user_data);

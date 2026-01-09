@@ -1963,3 +1963,83 @@ TEST(BH1750, PowerOnBusy)
 {
     test_busy_if_seq_in_progress(power_on);
 }
+
+static uint8_t power_down()
+{
+    return bh1750_power_down(bh1750, bh1750_complete_cb, NULL);
+}
+
+TEST(BH1750, PowerDownBusy)
+{
+    test_busy_if_seq_in_progress(power_down);
+}
+
+static uint8_t reset()
+{
+    return bh1750_reset(bh1750, bh1750_complete_cb, NULL);
+}
+
+TEST(BH1750, ResetBusy)
+{
+    test_busy_if_seq_in_progress(reset);
+}
+
+static uint8_t start_continuous_measurement()
+{
+    return bh1750_start_continuous_measurement(bh1750, BH1750_MEAS_MODE_H_RES, bh1750_complete_cb, NULL);
+}
+
+TEST(BH1750, StartContMeasBusy)
+{
+    test_busy_if_seq_in_progress(start_continuous_measurement);
+}
+
+static uint8_t read_continuous_measurement()
+{
+    uint32_t meas_lx;
+    return bh1750_read_continuous_measurement(bh1750, &meas_lx, bh1750_complete_cb, NULL);
+}
+
+TEST(BH1750, ReadContMeasBusy)
+{
+    uint8_t rc_create = bh1750_create(&bh1750, &init_cfg);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_create);
+    call_init();
+
+    /* Before callng bh1750_read_continuous_measurement, we need to start continuous measurement. Otherwise, we get an
+     * INVALID_USAGE return code. */
+
+    /* Start continuous measurement in H-resolution mode cmd */
+    uint8_t i2c_write_data_start_cont_meas = 0x10;
+    /* bh1750_start_continuous_measurement */
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", &i2c_write_data_start_cont_meas, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", init_cfg.i2c_addr)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+    /* Power down cmd */
+    uint8_t i2c_write_data_power_down = 0x0;
+    mock()
+        .expectOneCall("mock_bh1750_i2c_write")
+        .withMemoryBufferParameter("data", &i2c_write_data_power_down, 1)
+        .withParameter("length", 1)
+        .withParameter("i2c_addr", init_cfg.i2c_addr)
+        .withParameter("user_data", i2c_write_user_data)
+        .ignoreOtherParameters();
+
+    uint8_t rc_start_meas = bh1750_start_continuous_measurement(bh1750, BH1750_MEAS_MODE_H_RES, NULL, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_start_meas);
+    i2c_write_complete_cb(BH1750_I2C_RESULT_CODE_OK, i2c_write_complete_cb_user_data);
+
+    uint8_t rc_power_down = bh1750_power_down(bh1750, NULL, NULL);
+    CHECK_EQUAL(BH1750_RESULT_CODE_OK, rc_power_down);
+    /* I2C write callback is not executed yet, so enable power down sequence is still in progres. The driver should
+     * reject attempts to start new sequences. */
+
+    uint8_t rc = read_continuous_measurement();
+    CHECK_EQUAL(BH1750_RESULT_CODE_BUSY, rc);
+    /* User cb should not be called when busy is returned */
+    CHECK_EQUAL(0, complete_cb_call_count);
+}
