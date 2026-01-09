@@ -2020,3 +2020,34 @@ TEST(BH1750, ReadContMeasBusy)
     /* User cb should not be called when busy is returned */
     CHECK_EQUAL(0, complete_cb_call_count);
 }
+
+static uint8_t read_one_time_measurement()
+{
+    uint32_t meas_lx;
+    return bh1750_read_one_time_measurement(bh1750, BH1750_MEAS_MODE_H_RES, &meas_lx, bh1750_complete_cb, NULL);
+}
+
+TEST(BH1750, ReadOneTimeMeasBusy)
+{
+    test_busy_if_seq_in_progress(read_one_time_measurement);
+}
+
+static uint8_t set_measurement_time()
+{
+    return bh1750_set_measurement_time(bh1750, 69, bh1750_complete_cb, NULL);
+}
+
+TEST(BH1750, SetMeasTimeBusy)
+{
+    test_busy_if_seq_in_progress(set_measurement_time);
+}
+
+static uint8_t destroy()
+{
+    return bh1750_destroy(bh1750, NULL, NULL);
+}
+
+TEST(BH1750, DestroyBusy)
+{
+    test_busy_if_seq_in_progress(destroy);
+}

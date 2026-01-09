@@ -748,6 +748,9 @@ uint8_t bh1750_read_one_time_measurement(BH1750 self, uint8_t meas_mode, uint32_
     if (!self->initialized) {
         return BH1750_RESULT_CODE_INVALID_USAGE;
     }
+    if (self->is_seq_ongoing) {
+        return BH1750_RESULT_CODE_BUSY;
+    }
 
     start_sequence(self, (void *)cb, user_data);
     /* So that the last part of the sequence can write the result to meas_lx */
@@ -766,6 +769,9 @@ uint8_t bh1750_set_measurement_time(BH1750 self, uint8_t meas_time, BH1750Comple
     if (!self->initialized || self->cont_meas_ongoing) {
         return BH1750_RESULT_CODE_INVALID_USAGE;
     }
+    if (self->is_seq_ongoing) {
+        return BH1750_RESULT_CODE_BUSY;
+    }
 
     start_sequence(self, (void *)cb, user_data);
     set_meas_time_part_1(self, meas_time);
@@ -776,6 +782,9 @@ uint8_t bh1750_destroy(BH1750 self, BH1750FreeInstanceMemory free_instance_memor
 {
     if (!self) {
         return BH1750_RESULT_CODE_INVALID_ARG;
+    }
+    if (self->is_seq_ongoing) {
+        return BH1750_RESULT_CODE_BUSY;
     }
 
     if (free_instance_memory) {

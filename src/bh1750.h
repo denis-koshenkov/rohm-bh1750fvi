@@ -156,6 +156,7 @@ uint8_t bh1750_init(BH1750 self, BH1750CompleteCb cb, void *user_data);
  * @retval BH1750_RESULT_CODE_OK Successfully initiated power on.
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL.
  * @retval BH1750_RESULT_CODE_INVALID_USAGE Instance is not yet initialized, call @ref bh1750_init first.
+ * @retval BH1750_RESULT_CODE_BUSY Failed, there is currently another sequence in progress.
  */
 uint8_t bh1750_power_on(BH1750 self, BH1750CompleteCb cb, void *user_data);
 
@@ -176,6 +177,7 @@ uint8_t bh1750_power_on(BH1750 self, BH1750CompleteCb cb, void *user_data);
  * @retval BH1750_RESULT_CODE_OK Successfully initiated power down.
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL.
  * @retval BH1750_RESULT_CODE_INVALID_USAGE Instance is not yet initialized, call @ref bh1750_init first.
+ * @retval BH1750_RESULT_CODE_BUSY Failed, there is currently another sequence in progress.
  */
 uint8_t bh1750_power_down(BH1750 self, BH1750CompleteCb cb, void *user_data);
 
@@ -199,6 +201,7 @@ uint8_t bh1750_power_down(BH1750 self, BH1750CompleteCb cb, void *user_data);
  * @retval BH1750_RESULT_CODE_OK Successfully initiated reset.
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL.
  * @retval BH1750_RESULT_CODE_INVALID_USAGE Instance is not yet initialized, call @ref bh1750_init first.
+ * @retval BH1750_RESULT_CODE_BUSY Failed, there is currently another sequence in progress.
  *
  * @note This command does not work in power down mode. Make sure the device is in power on mode before calling this
  * function.
@@ -224,6 +227,7 @@ uint8_t bh1750_reset(BH1750 self, BH1750CompleteCb cb, void *user_data);
  * @retval BH1750_RESULT_CODE_OK Successfully initiated start continuous measurement.
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL, or @p meas_mode is not a valid measurement mode.
  * @retval BH1750_RESULT_CODE_INVALID_USAGE Instance is not yet initialized, call @ref bh1750_init first.
+ * @retval BH1750_RESULT_CODE_BUSY Failed, there is currently another sequence in progress.
  */
 uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH1750CompleteCb cb, void *user_data);
 
@@ -254,6 +258,7 @@ uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH17
  * @retval BH1750_RESULT_CODE_OK Successfully initiated reading continuous measurement.
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p self or @p meas_lx is NULL.
  * @retval BH1750_RESULT_CODE_INVALID_USAGE Cannot read measurement, because continuous measurement is not ongoing.
+ * @retval BH1750_RESULT_CODE_BUSY Failed, there is currently another sequence in progress.
  */
 uint8_t bh1750_read_continuous_measurement(BH1750 self, uint32_t *const meas_lx, BH1750CompleteCb cb, void *user_data);
 
@@ -283,6 +288,7 @@ uint8_t bh1750_read_continuous_measurement(BH1750 self, uint32_t *const meas_lx,
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL, @p meas_lx is NULL, or @p meas_mode is not a valid
  * measurement mode.
  * @retval BH1750_RESULT_CODE_INVALID_USAGE Instance is not yet initialized, call @ref bh1750_init first.
+ * @retval BH1750_RESULT_CODE_BUSY Failed, there is currently another sequence in progress.
  */
 uint8_t bh1750_read_one_time_measurement(BH1750 self, uint8_t meas_mode, uint32_t *const meas_lx, BH1750CompleteCb cb,
                                          void *user_data);
@@ -321,6 +327,7 @@ uint8_t bh1750_read_one_time_measurement(BH1750 self, uint8_t meas_mode, uint32_
  * @retval BH1750_RESULT_CODE_OK Successfully initiated set measurement time.
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL, or @p meas_time is not within the allowed range.
  * @retval BH1750_RESULT_CODE_INVALID_USAGE Instance is not yet initialized, or continuous measurement is ongoing.
+ * @retval BH1750_RESULT_CODE_BUSY Failed, there is currently another sequence in progress.
  * @retval BH1750_RESULT_CODE_DRIVER_ERR Something went weong in the code of this driver.
  */
 uint8_t bh1750_set_measurement_time(BH1750 self, uint8_t meas_time, BH1750CompleteCb cb, void *user_data);
@@ -330,6 +337,10 @@ uint8_t bh1750_set_measurement_time(BH1750 self, uint8_t meas_time, BH1750Comple
  *
  * It is allowed to call this function before @ref bh1750_init is called.
  *
+ * It is not allowed to call this function when there is an ongoing sequence. There could be a callback scheduled to be
+ * executed, which will access the BH1750 instance memory. If we destroy the instance before that callback is executed,
+ * the callback will access the memory of an already destroyed sequence, which could result in memory issues.
+ *
  * @param[in] self BH1750 instance created by @ref bh1750_create.
  * @param[in] free_instance_memory Optional callback to give the caller a chance to free BH1750 instance memory, if
  * required. See @ref BH1750FreeInstanceMemory.
@@ -337,6 +348,7 @@ uint8_t bh1750_set_measurement_time(BH1750 self, uint8_t meas_time, BH1750Comple
  *
  * @retval BH1750_RESULT_CODE_OK Successfully destroyed BH1750 instance.
  * @retval BH1750_RESULT_CODE_INVALID_ARG @p self is NULL.
+ * @retval BH1750_RESULT_CODE_BUSY Failed to destroy, another sequence is currently in progress.
  */
 uint8_t bh1750_destroy(BH1750 self, BH1750FreeInstanceMemory free_instance_memory, void *user_data);
 
