@@ -243,7 +243,7 @@ if (rc != BH1750_RESULT_CODE_OK) {
 ```
 
 # Running Tests
-Follows these steps in order to run all unit tests for the driver source code.
+Follow these steps in order to run all unit tests for the driver source code.
 
 Prerequisites:
 - CMake
