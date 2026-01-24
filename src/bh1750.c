@@ -424,7 +424,7 @@ static uint8_t convert_raw_meas_to_lx(BH1750 self, uint16_t raw_meas, uint32_t *
         *meas_lx = lroundf(raw_meas * ((BH1750_CONVERSION_MAGIC * (69.0f / (self->meas_time))) / 2.0f));
         break;
     case BH1750_MEAS_MODE_L_RES:
-        *meas_lx = lroundf(raw_meas * BH1750_CONVERSION_MAGIC);
+        *meas_lx = lroundf(raw_meas * (BH1750_CONVERSION_MAGIC * (69.0f / (self->meas_time))));
         break;
     default:
         /* Invalid measurement mode */
@@ -587,22 +587,19 @@ static void read_one_time_meas_part_2(uint8_t result_code, void *user_data)
         return;
     }
 
-    uint32_t timer_period;
-    if (self->meas_mode == BH1750_MEAS_MODE_L_RES) {
-        timer_period = BH1750_MAX_L_RES_MEAS_TIME_MS;
-    } else {
-        /* In high res mdoes, the time we need to wait depends on the meas time currently set in Mtreg. We keep a RAM
-         * copy of that value in self->meas_time. The higher self->meas_time, the longer it will take to make a
-         * measurement. For example:
-         * Meas time in Mtreg is 138. Default meas time is 69. 138/69 = 2. This means that we should wait twice as long
-         * compared to if meas time were 69.
-         * It takes 180 ms to make a measurement in high res mode when meas time in Mtreg is 69. This means that we
-         * should wait for 180 * 2 = 360 ms - that's how long it will take to make a measurement when meas time in Mtreg
-         * is 138. */
-        float timer_period_multiplier = ((float)self->meas_time) / BH1750_DEFAULT_MEAS_TIME;
-        /* Ceil timer period instead of rounding to be sure that measurement is ready after timer expires */
-        timer_period = ceilf(BH1750_MAX_H_RES_MEAS_TIME_MS * timer_period_multiplier);
-    }
+    uint32_t timer_period_base =
+        (self->meas_mode == BH1750_MEAS_MODE_L_RES) ? BH1750_MAX_L_RES_MEAS_TIME_MS : BH1750_MAX_H_RES_MEAS_TIME_MS;
+    /* Time we need to wait depends on the meas time currently set in Mtreg. We keep a RAM copy of that value in
+     * self->meas_time. The higher self->meas_time, the longer it will take to make a measurement.
+     * For example: Meas time in Mtreg is 138. Default meas time is 69. 138/69 = 2. This means that we should wait twice
+     * as long compared to if meas time were 69.
+     * It takes 180 ms to make a measurement in high res mode when meas time in Mtreg is 69. This means that we should
+     * wait for 180 * 2 = 360 ms - that's how long it will take to make a measurement when meas time in Mtreg is 138.
+     * The logic for low res mode is the same, but we use 24 ms instead of 180 ms, since it takes 24 ms to take a
+     * measurement in low res mode when meas time in Mtreg is 69. */
+    float timer_period_multiplier = ((float)self->meas_time) / BH1750_DEFAULT_MEAS_TIME;
+    /* Ceil timer period instead of rounding to be sure that measurement is ready after timer expires */
+    uint32_t timer_period = ceilf(timer_period_base * timer_period_multiplier);
     self->start_timer(timer_period, self->start_timer_user_data, read_one_time_meas_part_3, (void *)self);
 }
 

@@ -268,7 +268,7 @@ uint8_t bh1750_read_continuous_measurement(BH1750 self, uint32_t *const meas_lx,
  * Steps:
  * 1. Send "one-time measurement" command for the @p meas_mode provided by the caller.
  * 2. Wait until the measurement is ready using a timer. The time it takes to take a measurement depends on @p meas_mode
- * and currently set measurement time (makes a difference only in high res modes).
+ * and currently set measurement time.
  * 3. Read measurement result from the device and convert it to illuminance measurement in lx.
  *
  * Once the sequence described above is complete, or an error occurs, @p cb is executed. "result_code" parameter of @p

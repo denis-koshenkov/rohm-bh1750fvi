@@ -1135,8 +1135,7 @@ TEST(BH1750, ReadContMeasLResMeasTime138)
     uint8_t i2c_write_data_3 = 0x13;
     /* Example from the datasheet, p. 7 */
     uint8_t i2c_read_data[] = {0x83, 0x90};
-    /* Different meas time does not apply to low res mode. This is simply (0x8390 / 1.2f) - raw meas divided by 1.2. */
-    uint32_t expected_meas_lx = 28067;
+    uint32_t expected_meas_lx = 14033; /* (0x8390 * ((1 / 1.2) * (69 / 138))) */
     test_cont_meas_changes_with_meas_time(meas_time, &i2c_write_data_1, i2c_write_rc_1, &i2c_write_data_2,
                                           i2c_write_rc_2, meas_mode, &i2c_write_data_3, i2c_read_data,
                                           expected_meas_lx);
@@ -1673,7 +1672,7 @@ TEST(BH1750, ReadOneTimeMeasLResModeMeasTime138)
     uint8_t meas_time_i2c_write_data_1 = 0x44;
     /* Set five least significant bits of MTreg to 01010 */
     uint8_t meas_time_i2c_write_data_2 = 0x6A;
-    /* One-time measurement in H-resolution 2 mode cmd */
+    /* One-time measurement in L-resolution mode cmd */
     uint8_t i2c_write_data = 0x23;
     /* Example from the datasheet, p. 7 */
     uint8_t i2c_read_data[] = {0x83, 0x90};
@@ -1685,12 +1684,38 @@ TEST(BH1750, ReadOneTimeMeasLResModeMeasTime138)
         .meas_mode = BH1750_MEAS_MODE_L_RES,
         .i2c_write_data = &i2c_write_data,
         .i2c_write_rc = BH1750_I2C_RESULT_CODE_OK,
-        /* In low res mode, meas time does not affect how long it takes to make a measurement. It is always 24 in low
-           res mode. */
-        .timer_period = 24,
+        .timer_period = 48, /* 24 * 2, because meas time is 2 timer higher than default (69) */
         .i2c_read_data = i2c_read_data,
         .i2c_read_rc = BH1750_I2C_RESULT_CODE_OK,
-        .expected_meas_lx = 28067, /* (0x8390 * (1 / 1.2)) */
+        .expected_meas_lx = 14033, /* (0x8390 * ((1 / 1.2) * (69 / 138))) */
+        .complete_cb = bh1750_complete_cb,
+        .expected_complete_cb_rc = BH1750_RESULT_CODE_OK,
+    };
+    test_read_one_time_meas(&cfg);
+}
+
+TEST(BH1750, ReadOneTimeMeasLResModeMeasTime31)
+{
+    /* Set three most significant bits of MTreg to 000 */
+    uint8_t meas_time_i2c_write_data_1 = 0x40;
+    /* Set five least significant bits of MTreg to 11111 */
+    uint8_t meas_time_i2c_write_data_2 = 0x7F;
+    /* One-time measurement in L-resolution mode cmd */
+    uint8_t i2c_write_data = 0x23;
+    /* Example from the datasheet, p. 7 */
+    uint8_t i2c_read_data[] = {0x83, 0x90};
+    TestReadOneTimeMeasCfg cfg = {
+        .i2c_addr = BH1750_TEST_DEFAULT_I2C_ADDR,
+        .meas_time = 31, /* bin: 00011111 */
+        .meas_time_i2c_write_data_1 = &meas_time_i2c_write_data_1,
+        .meas_time_i2c_write_data_2 = &meas_time_i2c_write_data_2,
+        .meas_mode = BH1750_MEAS_MODE_L_RES,
+        .i2c_write_data = &i2c_write_data,
+        .i2c_write_rc = BH1750_I2C_RESULT_CODE_OK,
+        .timer_period = 11, /* ceil(24 * (31 / 69)) */
+        .i2c_read_data = i2c_read_data,
+        .i2c_read_rc = BH1750_I2C_RESULT_CODE_OK,
+        .expected_meas_lx = 62471, /* (0x8390 * ((1 / 1.2) * (69 / 31))) */
         .complete_cb = bh1750_complete_cb,
         .expected_complete_cb_rc = BH1750_RESULT_CODE_OK,
     };
