@@ -125,8 +125,8 @@ uint8_t bh1750_create(BH1750 *const inst, const BH1750InitConfig *const cfg);
  *
  * Once the init sequence is complete, or an error occurs, @p cb is executed. "result_code" parameter of @p cb indicates
  * success or reason for failure of the init sequence:
- * - @ref SHT3X_RESULT_CODE_OK Successfully performed the init sequence.
- * - @ref SHT3X_RESULT_CODE_IO_ERR I2C One of the I2C transactions in the init sequence failed.
+ * - @ref BH1750_RESULT_CODE_OK Successfully performed the init sequence.
+ * - @ref BH1750_RESULT_CODE_IO_ERR I2C One of the I2C transactions in the init sequence failed.
  * - @ref BH1750_RESULT_CODE_DRIVER_ERR Something went wrong with the code of this driver.
  *
  * @param[in] self BH1750 instance created by @ref bh1750_create.
@@ -146,8 +146,8 @@ uint8_t bh1750_init(BH1750 self, BH1750CompleteCb cb, void *user_data);
  *
  * Once the power on sequence is complete, or an error occurs, @p cb is executed. "result_code" parameter of @p cb
  * indicates success or reason for failure of the power on sequence:
- * - @ref SHT3X_RESULT_CODE_OK Successfully performed the power on sequence.
- * - @ref SHT3X_RESULT_CODE_IO_ERR I2C transaction to send the power on command failed.
+ * - @ref BH1750_RESULT_CODE_OK Successfully performed the power on sequence.
+ * - @ref BH1750_RESULT_CODE_IO_ERR I2C transaction to send the power on command failed.
  *
  * @param[in] self BH1750 instance created by @ref bh1750_create.
  * @param[in] cb Callback to execute once power on is complete.
@@ -167,8 +167,8 @@ uint8_t bh1750_power_on(BH1750 self, BH1750CompleteCb cb, void *user_data);
  *
  * Once the power down sequence is complete, or an error occurs, @p cb is executed. "result_code" parameter of @p cb
  * indicates success or reason for failure of the power down sequence:
- * - @ref SHT3X_RESULT_CODE_OK Successfully performed the power down sequence.
- * - @ref SHT3X_RESULT_CODE_IO_ERR I2C transaction to send the power down command failed.
+ * - @ref BH1750_RESULT_CODE_OK Successfully performed the power down sequence.
+ * - @ref BH1750_RESULT_CODE_IO_ERR I2C transaction to send the power down command failed.
  *
  * @param[in] self BH1750 instance created by @ref bh1750_create.
  * @param[in] cb Callback to execute once power down is complete.
@@ -191,8 +191,8 @@ uint8_t bh1750_power_down(BH1750 self, BH1750CompleteCb cb, void *user_data);
  *
  * Once the reset sequence is complete, or an error occurs, @p cb is executed. "result_code" parameter of @p cb
  * indicates success or reason for failure of the reset sequence:
- * - @ref SHT3X_RESULT_CODE_OK Successfully performed the reset sequence.
- * - @ref SHT3X_RESULT_CODE_IO_ERR I2C transaction to send the reset command failed.
+ * - @ref BH1750_RESULT_CODE_OK Successfully performed the reset sequence.
+ * - @ref BH1750_RESULT_CODE_IO_ERR I2C transaction to send the reset command failed.
  *
  * @param[in] self BH1750 instance created by @ref bh1750_create.
  * @param[in] cb Callback to execute once reset is complete.
@@ -216,8 +216,8 @@ uint8_t bh1750_reset(BH1750 self, BH1750CompleteCb cb, void *user_data);
  *
  * Once the start continuous measurement sequence is complete, or an error occurs, @p cb is executed. "result_code"
  * parameter of @p cb indicates success or reason for failure of the start continuous measurement sequence:
- * - @ref SHT3X_RESULT_CODE_OK Successfully performed the start continuous measurement sequence.
- * - @ref SHT3X_RESULT_CODE_IO_ERR I2C transaction to send the start continuous measurement command failed.
+ * - @ref BH1750_RESULT_CODE_OK Successfully performed the start continuous measurement sequence.
+ * - @ref BH1750_RESULT_CODE_IO_ERR I2C transaction to send the start continuous measurement command failed.
  *
  * @param[in] self BH1750 instance created by @ref bh1750_create.
  * @param[in] meas_mode Continuous measurement mode. Use @ref BH1750MeasMode.
@@ -245,9 +245,9 @@ uint8_t bh1750_start_continuous_measurement(BH1750 self, uint8_t meas_mode, BH17
  *
  * Once the read continuous measurement sequence is complete, or an error occurs, @p cb is executed. "result_code"
  * parameter of @p cb indicates success or reason for failure of the read continuous measurement sequence:
- * - @ref SHT3X_RESULT_CODE_OK Successfully performed the read continuous measurement sequence.
- * - @ref SHT3X_RESULT_CODE_IO_ERR I2C transaction to read the measurement failed.
- * - @ref SHT3X_RESULT_CODE_DRIVER_ERR Something went wrong in the code of this driver.
+ * - @ref BH1750_RESULT_CODE_OK Successfully performed the read continuous measurement sequence.
+ * - @ref BH1750_RESULT_CODE_IO_ERR I2C transaction to read the measurement failed.
+ * - @ref BH1750_RESULT_CODE_DRIVER_ERR Something went wrong in the code of this driver.
  *
  * @param[in] self BH1750 instance created by @ref bh1750_create.
  * @param[out] meas_lx Resulting illuminance measurement in lx.
@@ -273,9 +273,9 @@ uint8_t bh1750_read_continuous_measurement(BH1750 self, uint32_t *const meas_lx,
  *
  * Once the sequence described above is complete, or an error occurs, @p cb is executed. "result_code" parameter of @p
  * cb indicates success or reason for failure:
- * - @ref SHT3X_RESULT_CODE_OK Successfully performed the read one time measurement sequence.
- * - @ref SHT3X_RESULT_CODE_IO_ERR One of the I2C transactions in the sequence failed.
- * - @ref SHT3X_RESULT_CODE_DRIVER_ERR Something went wrong in the code of this driver.
+ * - @ref BH1750_RESULT_CODE_OK Successfully performed the read one time measurement sequence.
+ * - @ref BH1750_RESULT_CODE_IO_ERR One of the I2C transactions in the sequence failed.
+ * - @ref BH1750_RESULT_CODE_DRIVER_ERR Something went wrong in the code of this driver.
  *
  * @param[in] self BH1750 instance created by @ref bh1750_create.
  * @param[in] meas_mode Measurement mode to use. Use one of @ref BH1750MeasMode.
@@ -315,8 +315,8 @@ uint8_t bh1750_read_one_time_measurement(BH1750 self, uint8_t meas_mode, uint32_
  *
  * Once the set measurement time sequence is complete, or an error occurs, @p cb is executed. "result_code"
  * parameter of @p cb indicates success or reason for failure of the set measurement time sequence:
- * - @ref SHT3X_RESULT_CODE_OK Successfully performed the set measurement time sequence.
- * - @ref SHT3X_RESULT_CODE_IO_ERR One of the I2C transactions failed.
+ * - @ref BH1750_RESULT_CODE_OK Successfully performed the set measurement time sequence.
+ * - @ref BH1750_RESULT_CODE_IO_ERR One of the I2C transactions failed.
  * - @ref BH1750_RESULT_CODE_DRIVER_ERR Something went wrong in the code of this driver.
  *
  * @param[in] self BH1750 instance created by @ref bh1750_create.
